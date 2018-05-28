@@ -7,9 +7,11 @@ PaCBAM implements a fast and scalable multi-core computational engine, generates
 
 To install PaCBAM clonet the repository and compile the C source code.
 
-`git clone https://CibioBCG@bitbucket.org/CibioBCG/pacbam.git`
-`cd pacbam`
-`make -f Makefile.linux`
+```bash
+git clone https://CibioBCG@bitbucket.org/CibioBCG/pacbam.git  
+cd pacbam
+make -f Makefile.linux
+```
 
 ## Usage
 
