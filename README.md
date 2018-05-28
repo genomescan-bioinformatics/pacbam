@@ -27,7 +27,8 @@ Running PaCBAM executable will list all usage options.
 
 ```
 Usage: 
- ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string] [duptab=string] [regionperc=float] [strandbias]
+ ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string]
+          [duptab=string] [regionperc=float] [strandbias]
 
 bam=string 
  NGS data file in BAM format 
@@ -71,7 +72,10 @@ The following command executes PaCBAM with mode 1, generating 3 output files.
 
 `../pacbam bam=NGSData.bam bed=TargetRegions.bed vcf=SNPsInTargetRegions.vcf fasta=/path-to-reference-genome/human_g1k_v37.fasta mode=1 out=./`
 
-The reference genome to use in this example can be downloaded at `ftp://ftp.ncbi.nlm.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.gz`.
+The reference genome to use in this example can be downloaded at
+
+`ftp://ftp.ncbi.nlm.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.gz`
+
 
 ## Output files
 
@@ -127,6 +131,24 @@ chr	pos	ref	alt	A	C	G	T	af	cov
 20	210097	C	T	0	82	0	1	0.012048	83
 ...
 ```
+
+when `strandbias` option is used, the output format is the following:
+
+```
+chr	pos	ref	alt	A	C	G	T	af	cov	Ars	Crs	Grs	Trs
+20	76953	G	A	1	0	99	0	0.010000	100	1	0	80	0
+20	126263	C	T	0	26	0	1	0.037037	27	0	0	0	0
+20	139484	A	G	156	0	1	0	0.006369	157	111	0	1	0
+20	139557	A	G	99	0	1	0	0.010000	100	39	0	0	0
+20	139570	C	A	1	171	0	0	0.005814	172	0	91	0	0
+20	139622	C	A	1	135	0	0	0.007353	136	0	67	0	0
+20	168728	T	A	56	0	0	0	1.000000	56	19	0	0	0
+20	209986	A	T	227	0	0	2	0.008734	229	106	0	0	1
+20	210097	C	T	0	82	0	1	0.012048	83	0	37	0	0
+...
+```
+
+Last four columns represent the number of reads, for each base, that are on the reverse strand. This information can be used to compute strand bias at base-specific resolution.
 
 ####  SNPs pileup
 Provides pileup information for all positions specified in the input VCF and uses the alternative alleles specified in the VCF file for the VAFs calculations. 
