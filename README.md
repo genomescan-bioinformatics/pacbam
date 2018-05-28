@@ -65,7 +65,7 @@ out=string
 
 ## Output files
 
-Each execution mode computes and generates a combination of files.
+Each execution mode computes and generates a combination of the followinf files.
 
 #### Depth of coverage characterization of all genomic regions
 For each region provides the mean depth of coverage, the GC content and the mean depth of coverage of the subregion (user specified, default 0.5 fraction) that maximizes the coverage peak signal (`rcS` and correspodning genomic coordinates `fromS` and `toS`), to account for the reduced coverage depth due to incomplete match of reads to the captured regions.
@@ -78,7 +78,27 @@ chr	from	to	fromS	toS	rc	rcS	gc
 1	26828102	26828248	26828136	26828208	492.88	529.68	0.58
 1	26828987	26829053	26829011	26829043	595.55	610.88	0.42
 1	26836987	26837058	26836994	26837028	161.72	164.60	0.59
+1	26843222	26843294	26843244	26843279	423.22	436.81	0.40
+1	26844137	26844233	26844163	26844210	183.45	191.83	0.47
+1	26845287	26845429	26845323	26845393	952.87	1026.44	0.50
 ...
+```
+
+#### Single-base resolution pileup
+
+For each genomic position in the target provides the read depth of the 4 possible bases A, C, G and T, the total depth of coverage, the variants allelic fraction (VAF), the strand bias information for each base, the unique identifier (e.g. dbsnp id) if available.
+
+```
+chr	pos	ref	A	C	G	T	af	cov
+1	26823507	C	0	186	0	0	0.000000	186
+1	26823508	A	167	0	0	0	0.000000	167
+1	26823509	G	0	0	166	0	0.000000	166
+1	26823510	C	0	180	0	0	0.000000	180
+1	26823511	T	0	4	0	177	0.022099	181
+1	26823512	G	0	0	187	0	0.000000	187
+1	26823513	C	0	195	0	0	0.000000	195
+1	26823514	A	196	0	0	0	0.000000	196
+1	26823515	G	0	0	202	0	0.000000	202
 ```
 
 ## Visual reports
