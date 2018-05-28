@@ -65,6 +65,21 @@ out=string
 
 ## Output files
 
+Each execution mode computes and generates a combination of files.
+
+#### Depth of coverage characterization of all genomic regions
+For each region provides the mean depth of coverage, the GC content and the mean depth of coverage of the subregion (user specified, default 0.5 fraction) that maximizes the coverage peak signal (`rcS` and correspodning genomic coordinates `fromS` and `toS`), to account for the reduced coverage depth due to incomplete match of reads to the captured regions.
+
+```
+chr	from	to	fromS	toS	rc	rcS	gc
+1	26823507	26823727	26823564	26823673	412.30	497.55	0.60
+1	26825032	26825177	26825062	26825133	711.43	754.71	0.42
+1	26826977	26827132	26827000	26827076	180.24	198.53	0.72
+1	26828102	26828248	26828136	26828208	492.88	529.68	0.58
+1	26828987	26829053	26829011	26829043	595.55	610.88	0.42
+1	26836987	26837058	26836994	26837028	161.72	164.60	0.59
+```
+
 ## Visual reports
 
 ## Licence
