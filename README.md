@@ -5,6 +5,10 @@ PaCBAM implements a fast and scalable multi-core computational engine, generates
 
 ## Installation
 
+To install PaCBAM clonet the repository and compile the C source code.
+
+`git clone`
+
 ## Usage
 
 ## Output files
