@@ -1349,7 +1349,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 		}
 		else
 		{
-			fprintf(outfileSNVs,"chr\tpos\tref\talt\tA\tC\tG\tT\taf\tcov\trsid");
+			fprintf(outfileSNVs,"chr\tpos\tref\talt\tA\tC\tG\tT\taf\tcov\trsid\n");
 		}
 	}
 	
@@ -1371,7 +1371,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 		i=0;
 		while(i<target_regions->info[r]->to-target_regions->info[r]->from+1)
 		{		
-			if (arguments->mode==4)
+			if (arguments->mode==5)
 			{
 				covG = getSum(target_regions->info[r]->rdata,i);
 				altG = getAlternativeSum(target_regions->info[r]->rdata,&(target_regions->info[r]->sequence[i]),i);
@@ -1504,7 +1504,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 				
 			if (ctrl==1)
 			{	
-				if (arguments->mode==4)
+				if (arguments->mode==5)
 				{
 					fprintf(outfileALL,"\n");
 					if(printID==1)
@@ -1918,7 +1918,7 @@ int main(int argc, char *argv[])
 		sprintf(stmp,"Output read count file in folder %s.",arguments->outdir);
 		printMessage(stmp);
 		outfile = fopen(outfile_name,"w");
-		fprintf(outfile,"chr\tfrom\tto\tfromSel\ttoSel\trcGlobal\trc\tgc\n");
+		fprintf(outfile,"chr\tfrom\tto\tfromS\ttoS\trc\trcS\tgc\n");
 		for (i=0;i<target_regions->length;i++)
 		{
 			printTargetRegionRC(outfile,target_regions->info[i]);
