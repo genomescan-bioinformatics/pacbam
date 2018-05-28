@@ -22,7 +22,7 @@ If libraries are not working we suggest to download/recompile them again.
 
 ## Multi-platform binaries and Docker/Singularity containers
 
-Binaries for Linux, MacOSX and Windows platforms can be found folder `binaries`.  
+Binaries for Linux, MacOSX and Windows platforms can be found in folder `binaries`.  
 Docker container can be found at ...  
 Singularity container can be found at ...
 
@@ -85,7 +85,7 @@ The reference genome to use in this example can be downloaded at
 
 ## Output files
 
-Each execution mode computes and generates a combination of the followinf files.
+Each execution mode computes and generates a combination of the following files.
 
 #### Depth of coverage characterization of all genomic regions
 For each region provides the mean depth of coverage, the GC content and the mean depth of coverage of the subregion (user specified, default 0.5 fraction) that maximizes the coverage peak signal (`rcS` and correspodning genomic coordinates `fromS` and `toS`), to account for the reduced coverage depth due to incomplete match of reads to the captured regions.
