@@ -177,5 +177,7 @@ chr	pos	rsid	ref	alt	A	C	G	T	af	cov
 ## Visual reports
 
 ## Licence
+ 
+PaCBAM is released under MIT licence.
 
 ## Credit
