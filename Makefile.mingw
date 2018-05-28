@@ -1,0 +1,17 @@
+all: dynamic
+
+LIBRARIES = -lbam -lm -lz -lpthread -lws2_32
+LIBRARIESDIR = ./lib/win32/
+INCLUDESDIR = ./include/
+CC = gcc
+CFLAGS = -g -w -Wall -O2
+APPNAME = pacbam
+
+dynamic: 
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) 
+
+static: 
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) -static 
+	
+clean: 
+	rm -f *.o 
