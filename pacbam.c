@@ -34,8 +34,8 @@ struct input_args
     int mbq;
     int mrq;
     int mdc;
-    int reads_info;
-    int dups_info;
+    //int reads_info;
+    //int dups_info;
     int dupmode;
     int strand_bias;
     float region_perc;
@@ -47,8 +47,8 @@ struct input_args *getInputArgs(char *argv[],int argc)
     int i;
     struct input_args *arguments = (struct input_args *)malloc(sizeof(struct input_args));
     arguments->cores = 1;
-    arguments->mbq = 0;
-    arguments->mrq = 0;
+    arguments->mbq = 20;
+    arguments->mrq = 1;
     arguments->mdc = 0;
     arguments->mode = 0;
     arguments->dupmode = 0;
@@ -60,8 +60,8 @@ struct input_args *getInputArgs(char *argv[],int argc)
     arguments->duptablename = NULL;
     arguments->outdir = (char *)malloc(3);
     sprintf(arguments->outdir,"./");
-    arguments->reads_info = 0;
-    arguments->dups_info = 0;
+    //arguments->reads_info = 0;
+    //arguments->dups_info = 0;
     arguments->region_perc = 1.0;
     
     char *tmp=NULL;
@@ -146,7 +146,7 @@ struct input_args *getInputArgs(char *argv[],int argc)
             strcpy(arguments->outdir,argv[i]+4);
 	    subSlash(arguments->outdir);
         }
-        else if( strncmp(argv[i],"readsinfo=",10) == 0 )
+        /*else if( strncmp(argv[i],"readsinfo=",10) == 0 )
         {
             tmp = (char*)malloc(strlen(argv[i])-9);
             strcpy(tmp,argv[i]+10);
@@ -159,7 +159,7 @@ struct input_args *getInputArgs(char *argv[],int argc)
             strcpy(tmp,argv[i]+9);
             arguments->dups_info = atoi(tmp);
             free(tmp);
-        }
+        }*/
         else if( strncmp(argv[i],"regionperc=",11) == 0 )
         {
             tmp = (char*)malloc(strlen(argv[i])-10);
@@ -209,11 +209,11 @@ int checkInputArgs(struct input_args *arguments)
 		fprintf(stderr,"ERROR: you should specify a reference genome FASTA file.\n");
 		control=1;
 	}
-	if (arguments->dupmode > 1 || arguments->dupmode < 0)
+	/*if (arguments->dupmode > 1 || arguments->dupmode < 0)
 	{
 		fprintf(stderr,"ERROR: dupmode is 0 or 1.\n");
 		control=1;
-	}
+	}*/
 	if (arguments->mbq < 0)
 	{
 		fprintf(stderr,"ERROR: minimum base quality should be positive.\n");
@@ -229,9 +229,14 @@ int checkInputArgs(struct input_args *arguments)
 		fprintf(stderr,"ERROR: minimum depth of coverage should be positive.\n");
 		control=1;
 	}
-	if (arguments->mode < 0 || arguments->mode>5)
+	if (arguments->mode < 0 || arguments->mode > 5)
 	{
 		fprintf(stderr,"ERROR: mode should be in 0,1,2,3,4.\n");
+		control=1;
+	}
+	if (arguments->region_perc < 0 || arguments->region_perc > 1)
+	{
+		fprintf(stderr,"ERROR: Region fraction should be in the range [0,1].\n");
 		control=1;
 	}
 	if(control==1)
@@ -243,12 +248,12 @@ void printArguments(struct input_args *arguments)
 {
 	if (arguments->duptablename!=NULL)
 	{
-		fprintf(stderr," BAM=%s\n BED=%s\n VCF=%s\n FASTA=%s\n DUPTABLE=%s\n MODE=%d\n MBQ=%d\n MRQ=%d\n MDC=%d\n THREADS=%d\n OUT=%s\n REGION PERC=%f\n",
+		fprintf(stderr," BAM=%s\n BED=%s\n VCF=%s\n FASTA=%s\n DUPTAB=%s\n MODE=%d\n MBQ=%d\n MRQ=%d\n MDC=%d\n THREADS=%d\n OUT=%s\n REGIONPERC=%f\n",
 		arguments->bam,arguments->bed,arguments->vcf,arguments->fasta,arguments->duptablename,arguments->mode,
 		arguments->mbq,arguments->mrq,arguments->mdc,arguments->cores,arguments->outdir,arguments->region_perc);
 	} else
 	{
-		fprintf(stderr," BAM=%s\n BED=%s\n VCF=%s\n FASTA=%s\n MODE=%d\n MBQ=%d\n MRQ=%d\n MDC=%d\n THREADS=%d\n OUT=%s\n REGION PERC=%f\n",
+		fprintf(stderr," BAM=%s\n BED=%s\n VCF=%s\n FASTA=%s\n MODE=%d\n MBQ=%d\n MRQ=%d\n MDC=%d\n THREADS=%d\n OUT=%s\n REGIONPERC=%f\n",
 		arguments->bam,arguments->bed,arguments->vcf,arguments->fasta,arguments->mode,
 		arguments->mbq,arguments->mrq,arguments->mdc,arguments->cores,arguments->outdir,arguments->region_perc);
 	}
@@ -256,18 +261,20 @@ void printArguments(struct input_args *arguments)
 
 void printHelp()
 {
-    fprintf(stderr,"\nUsage: \n ./PaCBAM bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string]\n\n");
+    fprintf(stderr,"\nUsage: \n ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string] [duptab=string] [regionperc=float] [strandbias]\n\n");
     fprintf(stderr,"bam=string \n NGS data file in BAM format \n");
-    fprintf(stderr,"bed=string \n List of captured regions in BED format \n");
+    fprintf(stderr,"bed=string \n List of target captured regions in BED format \n");
     fprintf(stderr,"vcf=string \n List of SNP positions in VCF format \n");
-    fprintf(stderr,"fasta=string \n Reference genome FASTA file \n");
-    fprintf(stderr,"mode=string \n Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP|2=SNPs|3=RC|4=SNVs(including SNPs)+PILEUP(including SNPs)]\n (default 0)\n");  
-    fprintf(stderr,"duptab=string \n Duplicates filter lookup table\n");  
-    fprintf(stderr,"dupmode=int \n Dedup mode [0=no cigar check|1=cigar check]\n");  
-    fprintf(stderr,"threads=int \n number of threads used (if available) for the pileup computation\n (default 1)\n");
-    fprintf(stderr,"mbq=int \n min base quality\n (default 0)\n");
-    fprintf(stderr,"mrq=int \n min read quality\n (default 0)\n");
-    fprintf(stderr,"mdc=int \n min depth of coverage that a position should have to be considered in the analysis\n (default 0)\n");
+    fprintf(stderr,"fasta=string \n Reference genome FASTA format file \n");
+    fprintf(stderr,"mode=string \n Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]\n (default 0)\n");  
+    fprintf(stderr,"duptab=string \n On-the-fly duplicates filtering lookup table\n");  
+    //fprintf(stderr,"dupmode=int \n Dedup mode [0=no cigar check|1=cigar check]\n");  
+    fprintf(stderr,"threads=int \n Number of threads used (if available) for the pileup computation\n (default 1)\n");
+    fprintf(stderr,"regionperc=float \n Fraction of the captured region to consider for maximum peak signal characterization\n (default 0.5)\n");
+    fprintf(stderr,"mbq=int \n Min base quality\n (default 20)\n");
+    fprintf(stderr,"mrq=int \n Min read quality\n (default 1)\n");
+    fprintf(stderr,"mdc=int \n Min depth of coverage that a position should have to be considered in the output\n (default 0)\n");
+    fprintf(stderr,"strandbias \n Print strand bias count information\n (default 1)\n");
     fprintf(stderr,"out=string \n Path of output directory (default is the current directory)\n\n");
 }
 
@@ -877,7 +884,7 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
     uint8_t *md;
     int thr_cov;
     Dlist *dup[4];
-    if (tmp->arguments->dups_info == 1 || tmp->arguments->duptablename != NULL)
+    if (tmp->arguments->duptablename != NULL) //|| tmp->arguments->dups_info == 1)
     {
     	dup[0] = dup[1] = dup[2] = dup[3] = NULL;
     }
@@ -1334,23 +1341,22 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 			fprintf(outfileSNVs,"\n");
 		}
 	}
-	if(arguments->mode==4)
+	if(arguments->mode==5)
 	{
-		fprintf(outfileSNVs,"chr\tpos\tref\talt\tA\tC\tG\tT\taf\tcov\trsid");
 		if(arguments->strand_bias==1)
 		{
-			fprintf(outfileSNVs,"\tArs\tCrs\tGrs\tTrs\n");
+			fprintf(outfileSNVs,"chr\tpos\tref\talt\tA\tC\tG\tT\taf\tcov\tArs\tCrs\tGrs\tTrs\trsid\n");
 		}
 		else
 		{
-			fprintf(outfileSNVs,"\n");
+			fprintf(outfileSNVs,"chr\tpos\tref\talt\tA\tC\tG\tT\taf\tcov\trsid");
 		}
 	}
 	
-	if(arguments->mode==1||arguments->mode==5)
+	if(arguments->mode==1||arguments->mode==4)
 		fprintf(outfileALL,"chr\tpos\tref\tA\tC\tG\tT\taf\tcov\n");
 
-	if(arguments->mode==4)
+	if(arguments->mode==5)
 		fprintf(outfileALL,"chr\tpos\tref\tA\tC\tG\tT\taf\tcov\trsid\n");
 
 	printID=0;
@@ -1425,7 +1431,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 				if(getChrPos(target_regions->info[r]->chr)==getChrPos(snps->info[j]->chr)&&
 					(i+target_regions->info[r]->from)==snps->info[j]->pos)
 				{
-					if (arguments->mode==4)
+					if (arguments->mode==5)
 					{
 						fprintf(outfileALL,"%s\n",snps->info[j]->rsid);
 						if(printID==1)
@@ -1454,7 +1460,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 							target_regions->info[r]->rdata->positions[i].T,
 							af,cov);
 					
-						if (arguments->dups_info == 1)
+						/*if (arguments->dups_info == 1)
 						{
 							fprintf(outfileDUP,"%s\t%d",target_regions->info[r]->chr,target_regions->info[r]->from+i);
 							fprintf(outfileDUP,"\t");
@@ -1466,7 +1472,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 							fprintf(outfileDUP,"\t");
 							printClist(target_regions->info[r]->rdata->positions[i].T_dup,outfileDUP);
 							fprintf(outfileDUP,"\n");
-						}
+						}*/
 					}
 					postmp = snps->info[j]->pos;
 					j++;
@@ -1505,7 +1511,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 						fprintf(outfileSNVs,"\n");
 				}
 					
-				if (arguments->mode==1||arguments->mode==5)
+				if (arguments->mode==1||arguments->mode==4)
 				{
 					covG = getSum(target_regions->info[r]->rdata,i);
 					altG = getAlternativeSum(target_regions->info[r]->rdata,&(target_regions->info[r]->sequence[i]),i);
@@ -1725,7 +1731,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.2.3\n");
+	fprintf(stderr, "PaCBAM version 1.3.0\n");
 	
 	if (argc == 1)
         {
@@ -1863,7 +1869,7 @@ int main(int argc, char *argv[])
 			outfileSNPs = fopen(outfile_name,"w");
 		}
 
-		if (arguments->mode == 0||arguments->mode == 1||arguments->mode == 4)
+		if (arguments->mode == 0||arguments->mode == 1||arguments->mode == 5)
 		{
 			if(outfile_name!=NULL)
 				  free(outfile_name);
@@ -1880,14 +1886,14 @@ int main(int argc, char *argv[])
 			outfileALL = fopen(outfile_name,"w");
 		}
 
-		if (arguments->dups_info == 1)
+		/*if (arguments->dups_info == 1)
 		{
 			if(outfile_name!=NULL)
 				  free(outfile_name);
 			outfile_name = (char*)malloc(strlen(tmp_string)+5);
 			sprintf(outfile_name,"%s.dup",tmp_string);
 			outfileDUP = fopen(outfile_name,"w");
-		}
+		}*/
 
 
 		printTargetRegionSNVsPileup(outfileSNPs,outfileSNVs,outfileALL,outfileDUP,target_regions,snps,arguments,0,target_regions->length);
