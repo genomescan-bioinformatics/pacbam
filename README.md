@@ -3,7 +3,13 @@
 PaCBAM is a C command line tool for the complete characterization of genomic regions and single nucleotide positions from next-generation sequencing data.  
 PaCBAM implements a fast and scalable multi-core computational engine, generates exhaustive output files for downstream analysis, introduces an innovative on-the-fly read duplicates filtering strategy and provides comprehensive visual reports. 
 
-## Installation
+## Multi-platform binaries and Docker/Singularity containers
+
+Binaries for Linux, MacOSX and Windows platforms can be found in folder `binaries`.  
+Docker container can be found at ...  
+Singularity container can be found at ...
+
+## Compilation from source code
 
 To install PaCBAM clonet the repository and compile the C source code.
 
@@ -19,12 +25,6 @@ For compilation on Windows we have added also `libz.a` library, while compilatio
 Libraries can be found in `./lib` directory.  
 Windows libraries have been generated using MinGW.  
 If libraries are not working we suggest to download/recompile them again.
-
-## Multi-platform binaries and Docker/Singularity containers
-
-Binaries for Linux, MacOSX and Windows platforms can be found in folder `binaries`.  
-Docker container can be found at ...  
-Singularity container can be found at ...
 
 ## Usage
 PaCBAM expects as input a sorted and indexed BAM file, a BED file with the coordinates of the genomic regions of interest (namely the target, e.g. captured regions of a WES experiment), a VCF file specifying a list of SNPs within the target and a reference genome FASTA file.  
