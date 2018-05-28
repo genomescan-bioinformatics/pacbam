@@ -13,12 +13,12 @@ cd pacbam
 make -f Makefile.linux
 ```
 
-Use instead Makefile.osx and Makefile.mingw to compile PaCBAM for, respectively, OSX and Windows systems.  
+Use instead Makefile.macosx and Makefile.mingw to compile PaCBAM on, respectively, OSX and Windows systems.  
 Samtools library `libbam.a` has been generated for GNU/Linux, Windows and MacOSX systems.  
 For compilation on Windows we have added also `libz.a` library, while compilation on Linux/MacOSX requires the installation of the development `zlib` package.  
 Libraries can be found in `./lib` directory.  
 Windows libraries have been generated using MinGW.  
-If libraries are not working we suggest to download them again.  
+If libraries are not working we suggest to download/recompile them again.
 
 ## Usage
 
