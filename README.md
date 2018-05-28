@@ -22,7 +22,7 @@ If libraries are not working we suggest to download/recompile them again.
 
 ## Multi-platform binaries and Docker/Singularity containers
 
-Binaries for Linux, MacOSX and Windows platforms can be found folder `binaries`.  
+Binaries for Linux, MacOSX and Windows platforms can be found in folder `binaries`.  
 Docker container can be found at ...  
 Singularity container can be found at ...
 
@@ -85,22 +85,22 @@ The reference genome to use in this example can be downloaded at
 
 ## Output files
 
-Each execution mode computes and generates a combination of the followinf files.
+Each execution mode computes and generates a combination of the following files.
 
 #### Depth of coverage characterization of all genomic regions
 For each region provides the mean depth of coverage, the GC content and the mean depth of coverage of the subregion (user specified, default 0.5 fraction) that maximizes the coverage peak signal (`rcS` and correspodning genomic coordinates `fromS` and `toS`), to account for the reduced coverage depth due to incomplete match of reads to the captured regions.
 
 ```
 chr	from	to	fromS	toS	rc	rcS	gc
-20	68348	68410	68348	68409	130.40	128.15	0.48
-20	76643	77060	76643	77059	81.18	81.05	0.41
-20	123267	123329	123267	123328	93.00	91.89	0.50
-20	126053	126335	126053	126334	32.55	32.55	0.44
-20	138183	138236	138183	138235	78.08	75.96	0.51
-20	139412	139667	139412	139666	117.86	117.74	0.39
-20	168524	168761	168524	168760	69.79	69.62	0.39
-20	170213	170266	170213	170265	13.91	13.40	0.40
-20	207927	207989	207927	207988	96.40	94.58	0.48
+20	68348	68410	68348	68378	130.40	129.68	0.48
+20	76643	77060	76845	77052	81.18	111.99	0.41
+20	123267	123329	123293	123323	93.00	99.81	0.50
+20	126053	126335	126100	126240	32.55	54.73	0.44
+20	138183	138236	138210	138235	78.08	99.92	0.51
+20	139412	139667	139510	139636	117.86	125.38	0.39
+20	168524	168761	168524	168641	69.79	91.03	0.39
+20	170213	170266	170213	170238	13.91	18.69	0.40
+20	207927	207989	207958	207988	96.40	106.65	0.48
 ...
 ```
 
