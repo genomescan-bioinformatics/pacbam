@@ -1,18 +1,17 @@
 all: dynamic
 
 LIBRARIES = -lbam -lm -lz -lpthread
-LIBRARIESDIR32 = ./lib/linux32/
-LIBRARIESDIR64 = ./lib/linux64/
+LIBRARIESDIR = ./lib/linux64/
 INCLUDESDIR = ./include/
 CC = gcc
 CFLAGS = -g -w -Wall -O2
 APPNAME = pacbam
 
 dynamic: 
-	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR64) $(LIBRARIES) 
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) 
 	
 static: 
-	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR64) $(LIBRARIES) -static
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) -static
 	
 clean: 
 	rm -f *.o 
