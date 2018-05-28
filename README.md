@@ -21,8 +21,9 @@ Windows libraries have been generated using MinGW.
 If libraries are not working we suggest to download/recompile them again.
 
 ## Usage
-
-Running PaCBAM executable will list usage options. 
+PaCBAM expects as input a sorted and indexed BAM file, a BED file with the coordinates of the genomic regions of interest (namely the target, e.g. captured regions of a WES experiment), a VCF file specifying a list of SNPs within the target and a reference genome FASTA file.  
+Different running modes and filtering/computation options are available.  
+Running PaCBAM executable will list all usage options. 
 
 ```
 Usage: 
@@ -85,7 +86,6 @@ chr	from	to	fromS	toS	rc	rcS	gc
 ```
 
 #### Single-base resolution pileup
-
 For each genomic position in the target provides the read depth of the 4 possible bases A, C, G and T, the total depth of coverage, the variants allelic fraction (VAF), the strand bias information for each base, the unique identifier (e.g. dbsnp id) if available.
 
 ```
@@ -99,6 +99,41 @@ chr	pos	ref	A	C	G	T	af	cov
 1	26823513	C	0	195	0	0	0.000000	195
 1	26823514	A	196	0	0	0	0.000000	196
 1	26823515	G	0	0	202	0	0.000000	202
+...
+```
+
+#### Single-nucleotide variants (SNVs) pileup
+Provides pileup information only for position with positive VAF, computed using the alternative base with highest read depth (if any); 
+
+```
+chr	pos	ref	alt	A	C	G	T	af	cov
+1	26823511	T	C	0	4	0	177	0.022099	181
+1	26823518	A	C	212	1	0	0	0.004695	213
+1	26823520	T	G	0	0	2	213	0.009302	215
+1	26823526	C	A	1	259	0	0	0.003846	260
+1	26823529	C	T	0	275	0	1	0.003623	276
+1	26823533	C	G	0	286	1	0	0.003484	287
+1	26823545	G	C	0	1	337	0	0.002959	338
+1	26823551	T	G	0	0	1	357	0.002793	358
+1	26823558	C	T	0	413	0	1	0.002415	414
+...
+```
+
+####  SNPs pileup
+Provides pileup information for all positions specified in the input VCF and uses the alternative alleles specified in the VCF file for the VAFs calculations. 
+
+```
+chr	pos	rsid	ref	alt	A	C	G	T	af	cov
+1	26823535	rs766098305	G	A	0	0	296	0	0.000000	296
+1	26823556	rs780428886	G	C	0	0	395	0	0.000000	395
+1	26823580	rs4659442	T	G	0	1	1	497	0.002008	498
+1	26823584	rs561155752	C	T	0	517	0	0	0.000000	517
+1	26823585	rs530200664	G	A	1	0	519	0	0.001923	520
+1	26823631	rs4659443	C	T	0	500	0	1	0.001996	501
+1	26823633	rs565667637	G	A	0	1	497	0	0.000000	497
+1	26823649	rs752253154	T	C	0	0	0	490	0.000000	490
+1	26823672	rs184766562	C	T	0	440	0	0	0.000000	440
+...
 ```
 
 ## Visual reports
