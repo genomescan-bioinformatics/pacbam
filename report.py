@@ -16,12 +16,15 @@ def read_params():
 		help="Specify the mode used")
 	outputArg = parser.add_argument('-o', '--output', type=str, required=False,
 		help="Specify the output file name (Default input.pdf)")
-	strandBiasArg = parser.add_argument('-s', '--strandBias', type=bool, required=False, default=False,
+	strandBiasArg = parser.add_argument('-s', '--strandBias', action='store_true', required=False, 
 		help="True for the strandBias option")
 	args = parser.parse_args()
 
 	if args.mode < 0 or args.mode > 4:
 		raise argparse.ArgumentError(modeArg, "Mode must be between 0 and 4")
+        
+        if args.strandBias and (args.mode not in [0,1]):
+                raise argparse.ArgumentError(strandBiasArg, "Strand Bias is available only in modes 0 and 1")
 
 	return args
 
@@ -29,9 +32,6 @@ def pileupReport(filename, binSize,outFile):
 	listSize = 1000000
 	with open(filename) as pileup:
 		next(pileup) #remove header
-		#pileupReader = csv.reader(pileup,delimiter="\t")
-		#pileupReader.next()
-
 		
 		cumulativeCoverage = [0] * listSize # << normal experiment coverage
 		bins = int(1/binSize) # number of bins for the allelic fraction
@@ -115,7 +115,7 @@ def SNPsReport(filename,lowerBound,upperBound,outFile):
 		coverageDistribution = []
 
 		for l in snps:
-			l = l.split('\t') #split
+			l = l.split('\t') 
 			AF = float(l[9]) #get allelic fraction
 			coverage = int(l[10])
 			coverageDistribution.append(coverage)
@@ -138,7 +138,7 @@ def SNPsReport(filename,lowerBound,upperBound,outFile):
 			next(snps) #skip header 
 
 			for l in snps:
-				l = l.split('\t') #split
+				l = l.split('\t') 
 				AF = float(l[9]) #get allelic fraction
 				coverage = int(l[10])
 				#check the coverage first quintile second third or forth
@@ -161,16 +161,16 @@ def SNPsReport(filename,lowerBound,upperBound,outFile):
 		pET = plt.bar(0,totalBins[1], color=EColor) 
 		pOT = plt.bar(0,totalBins[2],bottom=totalBins[1], color=OColor) 
 
-		pEQ1 = plt.bar(1,stratBins[0][0], color=EColor) # c
+		pEQ1 = plt.bar(1,stratBins[0][0], color=EColor) 
 		POQ1 = plt.bar(1,stratBins[0][1],bottom=stratBins[0][0], color=OColor)
 
-		pEQ2 = plt.bar(2,stratBins[1][0], color=EColor) # c
+		pEQ2 = plt.bar(2,stratBins[1][0], color=EColor) 
 		POQ2 = plt.bar(2,stratBins[1][1],bottom=stratBins[1][0], color=OColor)
 
-		pEQ3 = plt.bar(3,stratBins[2][0], color=EColor) # c
+		pEQ3 = plt.bar(3,stratBins[2][0], color=EColor) 
 		POQ3 = plt.bar(3,stratBins[2][1],bottom=stratBins[2][0], color=OColor)
 
-		pEQ4 = plt.bar(4,stratBins[3][0], color=EColor) # c
+		pEQ4 = plt.bar(4,stratBins[3][0], color=EColor) 
 		POQ4 = plt.bar(4,stratBins[3][1],bottom=stratBins[3][0], color=OColor)
 
 		Epatch = mpatches.Patch(color=EColor, label='Alternative Heterozygous')
@@ -290,7 +290,6 @@ def SNVsReport(filename,outFile,strandBias):
 		plt.xlabel("Reference Base")
 		plt.legend(handles=[Apatch,Cpatch,Gpatch,Tpatch],bbox_to_anchor=(1, 1),title="Alternative")
 		plt.text(.0, -.1, "File: " + filename,transform=plt.gca().transAxes)
-		#plt.legend(("purple","blue","red","yellow"), ("A","C","G","T"))
 
 		plt.savefig(outFile,format='pdf')
 		plt.clf()
@@ -313,7 +312,6 @@ def RCReport(filename,outFile):
 				regionCoverageGlobal.append(float(l[5]))
 				rCoverage.append(float(l[6]))
 
-		#gcDistribution = filter(lambda x: not math.isnan(x),gcDistribution)
 		#gc content plot
 		plt.hist(gcDistribution,bins=[x/100.0 for x in range(0,100)])
 		plt.axvline(np.percentile(gcDistribution,25), color=Q1Color, linestyle='dashed', linewidth=2)
@@ -376,6 +374,7 @@ if __name__ == '__main__':
 		pp = PdfPages(args.output + ".pdf") # outfile
 	else:
 		pp = PdfPages(args.input + ".pdf")
+
 	#input files
 	pileupFile = args.input + ".pileup" 
 	snpsFile = args.input + ".snps"
@@ -386,7 +385,7 @@ if __name__ == '__main__':
 	mode = args.mode
 
 	#report on the pilup
-	if mode == 1:
+	if mode == 1 or mode == 4:
 		print "Computing Pileup Report"
 		pileupReport(pileupFile, 0.001,pp)
 
