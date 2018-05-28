@@ -103,7 +103,7 @@ chr	pos	ref	A	C	G	T	af	cov
 ```
 
 #### Single-nucleotide variants (SNVs) pileup
-Provides pileup information only for position with positive VAF, computed using the alternative base with highest read depth (if any); 
+Provides pileup information only for position with positive VAF, computed using the alternative base with highest read depth (if any).
 
 ```
 chr	pos	ref	alt	A	C	G	T	af	cov
