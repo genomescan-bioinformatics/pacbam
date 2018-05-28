@@ -6,13 +6,13 @@ LIBRARIESDIR64 = ./lib/linux64/
 INCLUDESDIR = ./include/
 CC = gcc
 CFLAGS = -g -w -Wall -O2
-APPNAME = pacbam-test
+APPNAME = pacbam
 
 dynamic: 
-	$(CC) $(CFLAGS) -I$(INCLUDESDIR) main.c -o $(APPNAME) -L$(LIBRARIESDIR64) $(LIBRARIES) 
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR64) $(LIBRARIES) 
 	
 static: 
-	$(CC) $(CFLAGS) -I$(INCLUDESDIR) main.c -o $(APPNAME) -L$(LIBRARIESDIR64) $(LIBRARIES) -static
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR64) $(LIBRARIES) -static
 	
 clean: 
 	rm -f *.o 
