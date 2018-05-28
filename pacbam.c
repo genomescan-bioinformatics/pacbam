@@ -62,7 +62,7 @@ struct input_args *getInputArgs(char *argv[],int argc)
     sprintf(arguments->outdir,"./");
     //arguments->reads_info = 0;
     //arguments->dups_info = 0;
-    arguments->region_perc = 1.0;
+    arguments->region_perc = 0.5;
     
     char *tmp=NULL;
 
