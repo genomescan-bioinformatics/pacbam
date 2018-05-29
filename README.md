@@ -182,9 +182,9 @@ It provides different graphs for every output file:
 	pileup: cumulative coverage and allelic fraction distributions
 
 ### Requirements
-Python 2.7.12
-Numpy 1.14.2
-matplotlib 2.2.2
+Python 2.7.12  
+Numpy 1.14.2  
+matplotlib 2.2.2  
 
 ### Usage
 The report scripts expects as input the output files from PaCBAM and the mode in which it was runned.
@@ -204,11 +204,11 @@ Usage:
 ```
 
 Mode option: 
-	0 Files: .rc, .snps and .snvs
-	1 Files: .rc, .snps, .snvs and .pileup
-	2 Files: .snps
-	3 Files: .rc
-	4 Files: .pileup
+	0 Files: .rc, .snps and .snvs  
+	1 Files: .rc, .snps, .snvs and .pileup  
+	2 Files: .snps  
+	3 Files: .rc  
+	4 Files: .pileup  
 
 StrandBias reporting is available only in modes 0 and 1.
 
@@ -222,7 +222,7 @@ The following command computes the visual reports for the example data.
 
 ### Output file
 The report script produces a single pdf file with all the graphs of the choosen mode.
-![cumulativeCoverage]("https://bitbucket.org/CibioBCG/pacbam/src/master/reports/cumulativeCoverage.pdf")
+![cumulativeCoverage]("https://bitbucket.org/CibioBCG/pacbam/src/master/reports/cumulativeCoverage.pnn")
 ## Licence
  
 PaCBAM is released under MIT licence.
