@@ -223,7 +223,7 @@ The following command computes the visual reports for the example data.
 ### Output file
 The report script produces a single pdf file with all the graphs of the choosen mode.
 
-![cumulativeCoverage]("reports/cumulativeCoverage.png")
+![cumulativeCoverage]("src/master/reports/cumulativeCoverage.png")
 ## Licence
  
 PaCBAM is released under MIT licence.
