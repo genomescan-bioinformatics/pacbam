@@ -224,16 +224,16 @@ The following command computes the visual reports for the example data.
 ### Output file
 The report script produces a single pdf file with all the graphs of the choosen mode.
 
-![cumulativeCoverage](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/cumulativeCoverage.png)
+![cumulativeCoverage](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/cumulativeCoverage.png)  
 *Example of PaCBAM reporting the cumulative coverage distribution for all positions reported in the PaCBAM pileup output file.*
 
-![SNPsTypes](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/SNPsTypes.png)
+![SNPsTypes](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/SNPsTypes.png)  
 *Example of PaCBAM reporting on allelic fraction (AF) distribution of all positions contained in the PaCBAM SNPs output file. SNPs are classified as heterozygous or alternative homozygous based on standard AF thresholds. Classification is also reported stratified by coverage quartiles.*
 
-![baseModification](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/baseModification.png)
+![baseModification](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/baseModification.png)  
 *Example of PaCBAM reporting on distribution of alternative bases found for each reference base across all positions reported in the SNVs PaCBAM output file (i.e. all positions with non-zero variant allelic fraction).*
 
-![regionCoverage](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/regionCoverage.png)
+![regionCoverage](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/regionCoverage.png)  
 *Example of PaCBAM reporting on mean depth of coverage distribution computed across all regions reported in the genomic regions of the PaCBAM output file. Distribution is reported both for regions overall mean coverage and for regions fractions maximizing mean coverage.*
 
 ## Licence
