@@ -176,9 +176,13 @@ chr	pos	rsid	ref	alt	A	C	G	T	af	cov
 ## Visual reports
 PaCBAM includes a script to generate visual data reports written in python.
 It provides different graphs for every output file:  
+
 	rc: gc content and region coverage distributions  
+
 	snps: total SNPs count, alternative heterozygous and alternative homozygous SNPs total distribution and quantile distributions  
+
 	snvs: base modification count and strand bias distribution  
+
 	pileup: cumulative coverage and allelic fraction distributions  
 
 ### Requirements
