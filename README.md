@@ -175,11 +175,11 @@ chr	pos	rsid	ref	alt	A	C	G	T	af	cov
 
 ## Visual reports
 PaCBAM includes a script to generate visual data reports written in python.
-It provides different graphs for every output file:
-	rc: gc content and region coverage distributions
-	snps: total SNPs count, alternative heterozygous and alternative homozygous SNPs total distribution and quantile distribution
-	snvs: base modification count and strand bias distribution
-	pileup: cumulative coverage and allelic fraction distributions
+It provides different graphs for every output file:  
+	rc: gc content and region coverage distributions  
+	snps: total SNPs count, alternative heterozygous and alternative homozygous SNPs total distribution and quantile distributions  
+	snvs: base modification count and strand bias distribution  
+	pileup: cumulative coverage and allelic fraction distributions  
 
 ### Requirements
 Python 2.7.12  
@@ -187,7 +187,7 @@ Numpy 1.14.2
 matplotlib 2.2.2  
 
 ### Usage
-The report scripts expects as input the output files from PaCBAM and the mode in which it was runned.
+The report scripts expects as input the prefix of the output files from PaCBAM and the mode in which it was runned.
 
 ```
 Usage:
@@ -216,7 +216,7 @@ StrandBias reporting is available only in modes 0 and 1.
 The following command computes the visual reports for the example data.
 
 ```
-./report.py -i example/NGSData -m 1 -o example/reports.pdf
+./report.py -i example/NGSData -m 1 -o reports/reports.pdf
 
 ```
 
@@ -224,6 +224,12 @@ The following command computes the visual reports for the example data.
 The report script produces a single pdf file with all the graphs of the choosen mode.
 
 ![cumulativeCoverage](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/cumulativeCoverage.png)
+*Example of PaCBAM reporting the cumulative coverage distribution for all positions reported in the PaCBAM pileup output file.*
+![SNPsTypes](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/SNPsTypes.png)
+*Example of PaCBAM reporting on allelic fraction (AF) distribution of all positions contained in the PaCBAM SNPs output file. SNPs are classified as heterozygous or alternative homozygous based on standard AF thresholds. Classification is also reported stratified by coverage quartiles.*
+![baseModification](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/baseModification.png)
+*Example of PaCBAM reporting on distribution of alternative bases found for each reference base across all positions reported in the SNVs PaCBAM output file (i.e. all positions with non-zero variant allelic fraction).*
+
 ## Licence
  
 PaCBAM is released under MIT licence.
