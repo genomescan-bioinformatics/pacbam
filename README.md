@@ -174,7 +174,7 @@ chr	pos	rsid	ref	alt	A	C	G	T	af	cov
 ```
 
 ## Visual reports
-PaCBAM includes a script to generate visual data reports written in python.
+PaCBAM includes a script to generate visual data reports written in python.  
 It provides different graphs for every output file:  
 
 	rc: gc content and region coverage distributions  
