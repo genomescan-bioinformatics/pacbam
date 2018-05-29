@@ -182,12 +182,12 @@ It provides different graphs for every output file:
 	snvs: base modification count and strand bias distribution  
 	pileup: cumulative coverage and allelic fraction distributions  
 
-### Requirements
+#### Requirements
 Python 2.7.12  
 Numpy 1.14.2  
 matplotlib 2.2.2  
 
-### Usage
+#### Usage
 The report scripts expects as input the prefix of the output files from PaCBAM and the mode in which it was runned.
 
 ```
@@ -213,7 +213,7 @@ Mode option:
 
 StrandBias reporting is available only in modes 0 and 1.
 
-### Example
+#### Example
 The following command computes the visual reports for the example data.
 
 ```
@@ -221,7 +221,7 @@ The following command computes the visual reports for the example data.
 
 ```
 
-### Output file
+#### Output file
 The report script produces a single pdf file with all the graphs of the choosen mode.
 
 ![cumulativeCoverage](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/cumulativeCoverage.png)  
