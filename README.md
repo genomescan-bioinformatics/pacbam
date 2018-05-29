@@ -11,7 +11,7 @@ Singularity container can be found at ...
 
 ## Compilation from source code
 
-To install PaCBAM clonet the repository and compile the C source code.
+To install PaCBAM clone the repository and compile the C source code.
 
 ```bash
 git clone https://CibioBCG@bitbucket.org/CibioBCG/pacbam.git  
@@ -74,7 +74,7 @@ out=string
 ## Examples
 
 Folder `examples` contains a small example of a BAM file and correspoding target regions in BED format and a SNPs in target regions in VCF format.  
-The following command executes PaCBAM with mode 1, generating 3 output files.
+The following command executes PaCBAM with mode 1, generating 4 output files.
 
 `../pacbam bam=NGSData.bam bed=TargetRegions.bed vcf=SNPsInTargetRegions.vcf fasta=/path-to-reference-genome/human_g1k_v37.fasta mode=1 out=./`
 
@@ -174,7 +174,55 @@ chr	pos	rsid	ref	alt	A	C	G	T	af	cov
 ```
 
 ## Visual reports
+PaCBAM includes a script to generate visual data reports written in python.
+It provides different graphs for every output file:
+	rc: gc content and region coverage distributions
+	snps: total SNPs count, alternative heterozygous and alternative homozygous SNPs total distribution and quantile distribution
+	snvs: base modification count and strand bias distribution
+	pileup: cumulative coverage and allelic fraction distributions
 
+### Requirements
+Python 2.7.12
+Numpy 1.14.2
+matplotlib 2.2.2
+
+### Usage
+The report scripts expects as input the output files from PaCBAM and the mode in which it was runned.
+
+```
+Usage:
+ ./report.py -i/--input string -m/--mode int [-o/--output string] [-s/--strandBias]
+
+-i INPUT, --input INPUT
+	Specify the input file prefix
+-m MODE, --mode MODE
+	Specify the mode used
+-o OUTPUT, --output OUTPUT
+	Specify the output file name (Default input.pdf)
+-s, --strandBias
+	Plots the strand bias distribution 
+```
+
+Mode option: 
+	0 Files: .rc, .snps and .snvs
+	1 Files: .rc, .snps, .snvs and .pileup
+	2 Files: .snps
+	3 Files: .rc
+	4 Files: .pileup
+
+StrandBias reporting is available only in modes 0 and 1.
+
+### Example
+The following command computes the visual reports for the example data.
+
+```
+./report.py -i example/NGSData -m 1 -o example/reports.pdf
+
+```
+
+### Output file
+The report script produces a single pdf file with all the graphs of the choosen mode.
+![cumulativeCoverage]("https://bitbucket.org/CibioBCG/pacbam/src/master/reports/cumulativeCoverage.pdf")
 ## Licence
  
 PaCBAM is released under MIT licence.

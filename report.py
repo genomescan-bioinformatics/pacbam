@@ -1,6 +1,5 @@
 #! /usr/bin/python
 import matplotlib.pyplot as plt
-import math
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import numpy as np
@@ -17,7 +16,7 @@ def read_params():
 	outputArg = parser.add_argument('-o', '--output', type=str, required=False,
 		help="Specify the output file name (Default input.pdf)")
 	strandBiasArg = parser.add_argument('-s', '--strandBias', action='store_true', required=False, 
-		help="True for the strandBias option")
+		help="Plots the strand bias distribution")
 	args = parser.parse_args()
 
 	if args.mode < 0 or args.mode > 4:
@@ -371,7 +370,7 @@ if __name__ == '__main__':
 	args = read_params()
 
 	if args.output is not None:
-		pp = PdfPages(args.output + ".pdf") # outfile
+		pp = PdfPages(args.output) # outfile
 	else:
 		pp = PdfPages(args.input + ".pdf")
 
