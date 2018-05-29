@@ -203,7 +203,7 @@ Usage:
 	Plots the strand bias distribution 
 ```
 
-Mode option: 
+Mode option:  
 	0 Files: .rc, .snps and .snvs  
 	1 Files: .rc, .snps, .snvs and .pileup  
 	2 Files: .snps  
@@ -222,7 +222,8 @@ The following command computes the visual reports for the example data.
 
 ### Output file
 The report script produces a single pdf file with all the graphs of the choosen mode.
-![cumulativeCoverage]("https://bitbucket.org/CibioBCG/pacbam/src/master/reports/cumulativeCoverage.pnn")
+
+![cumulativeCoverage]("https://bitbucket.org/CibioBCG/pacbam/src/master/reports/cumulativeCoverage.pn://bitbucket.org/CibioBCG/pacbam/src/master/reports/cumulativeCoverage.png")
 ## Licence
  
 PaCBAM is released under MIT licence.
