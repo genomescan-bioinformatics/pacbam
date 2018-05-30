@@ -240,6 +240,6 @@ The report script produces a single pdf file with all the graphs of the choosen 
 
 ## Licence
  
-PaCBAM is released under MIT licence.
+PaCBAM is released under [MIT](https://bitbucket.org/CibioBCG/pacbam/src/master/COPYING) licence.
 
 ## Credit
