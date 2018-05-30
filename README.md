@@ -5,7 +5,7 @@ PaCBAM implements a fast and scalable multi-core computational engine, generates
 
 ## Multi-platform binaries and Docker/Singularity containers
 
-Binaries for Linux, MacOSX and Windows platforms can be found in folder `binaries`.  
+Binaries for Linux, macOS and Windows platforms can be found in folder `binaries`.  
 Docker container can be found at ...  
 Singularity container can be found at ...
 
@@ -19,8 +19,8 @@ cd pacbam
 make -f Makefile.linux
 ```
 
-Use instead Makefile.macosx and Makefile.mingw to compile PaCBAM on, respectively, OSX and Windows systems.  
-Samtools library `libbam.a` has been generated for GNU/Linux, Windows and MacOSX systems.  
+Use instead Makefile.macos and Makefile.mingw to compile PaCBAM on, respectively, macOS and Windows systems.  
+Samtools library `libbam.a` has been generated for GNU/Linux, Windows and macOS systems.  
 For compilation on Windows we have added also `libz.a` library, while compilation on Linux/MacOSX requires the installation of the development `zlib` package.  
 Libraries can be found in `./lib` directory.  
 Windows libraries have been generated using MinGW.  
