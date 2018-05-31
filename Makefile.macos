@@ -1,0 +1,14 @@
+all: prog
+
+LIBRARIES = -lbam -lm -lz -lpthread
+LIBRARIESDIR = ./lib/macosx/
+INCLUDESDIR = ./include/
+CC = gcc
+CFLAGS = -g -w -Wall -O2
+APPNAME = pacbam
+
+prog: 
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) main.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) 
+	
+clean: 
+	rm -f *.o 
