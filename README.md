@@ -76,7 +76,7 @@ out=string
 Folder `examples` contains a small example of a BAM file and correspoding target regions in BED format and a SNPs in target regions in VCF format.  
 The following command executes PaCBAM with mode 1, generating 4 output files.
 
-```
+```bash
 ../pacbam bam=NGSData.bam bed=TargetRegions.bed vcf=SNPsInTargetRegions.vcf fasta=/path-to-reference-genome/human_g1k_v37.fasta mode=1 out=./
 ```
 
