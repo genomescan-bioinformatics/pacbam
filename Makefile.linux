@@ -4,7 +4,7 @@ LIBRARIES = -lbam -lm -lz -lpthread
 LIBRARIESDIR = ./lib/linux64/
 INCLUDESDIR = ./include/
 CC = gcc
-CFLAGS = -g -w -Wall -O2
+CFLAGS = -g -w -Wall -O2 -std=c11
 APPNAME = pacbam
 
 dynamic: 
