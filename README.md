@@ -84,12 +84,12 @@ The reference genome to use in this example can be downloaded at
 
 `ftp://ftp.ncbi.nlm.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.gz`
 
-To activate the *on-the-fly read duplicates filtering* add to the command `duptab=FileName.txt` where file `FileName.txt` has the following format:
+To activate the *on-the-fly read duplicates filtering* add to the command `duptab=FileName.txt` where file `FileName.txt` is a text tab-delimtied file with the following format:
 
 ```
- 0\t100\t1
- 100\t500\t2
- 500\t1000\t3
+ 0 100 1
+ 100 500 2
+ 500 1000 3
 ```
 
 This description means that the coverage of all positions with coverage in (0,100] will be normalized considering only 1 read per read duplicates group. A read duplicate group is
