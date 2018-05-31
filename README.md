@@ -84,7 +84,9 @@ The reference genome to use in this example can be downloaded at
 
 `ftp://ftp.ncbi.nlm.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.gz`
 
-To activate the *on-the-fly read duplicates filtering* add to the command `duptab=FileName.txt` where file `FileName.txt` is a text tab-delimtied file with the following format:
+#### Duplicates filtering
+
+To activate the *on-the-fly read duplicates filtering* add to the command `duptab=FileName.txt` where file `FileName.txt` is a text tab-delimited file with the following format:
 
 ```
  0 100 1
