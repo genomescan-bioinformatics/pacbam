@@ -8,7 +8,7 @@ CFLAGS = -g -w -Wall -O2
 APPNAME = pacbam
 
 prog: 
-	$(CC) $(CFLAGS) -I$(INCLUDESDIR) main.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) 
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) 
 	
 clean: 
 	rm -f *.o 
