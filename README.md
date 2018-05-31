@@ -84,6 +84,17 @@ The reference genome to use in this example can be downloaded at
 
 `ftp://ftp.ncbi.nlm.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.gz`
 
+To activate *on-the-fly read duplicates filtering* add to the command `uptab=FileName.txt` where file `FileName.txt` has the following format:
+
+```
+ 0\t100\t1
+ 100\t500\t2
+ 500\t1000\t3
+```
+
+This description means that the coverage of all positions with coverage in (0,100] will be normalized considering only 1 read per read duplicates group. A read duplicate group is
+determined by collecting all reads at the position and grouping them considering their strand and alignment positions (both read pair position are used in paired-end sequencing experiments).
+Similar filtering strategy is used for coverage intervals (100,500] and (500,1000] where at most 2 and 3 reads per read duplicates group are used, respectively.
 
 ## Output files
 
