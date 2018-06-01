@@ -10,9 +10,15 @@ RUN apt-get update                                               && \
                        make                                         \
                        git                                          \
                        zlib1g-dev                                   \
+                       libncurses-dev                               \
                                                                  && \
     git clone https://CibioBCG@bitbucket.org/CibioBCG/pacbam.git && \
     cd pacbam                                                    && \
+    cd include/samtools                                          && \
+    make                                                         && \
+    cd ../..                                                     && \
+    rm -rf ./lib/linux64/libbam.a                                && \
+    ln -s ../../include/samtools/libbam.a ./lib/linux64/         && \
     make -f Makefile.linux
 
 FROM debian:buster-slim
