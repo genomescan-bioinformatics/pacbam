@@ -6,8 +6,7 @@ PaCBAM implements a fast and scalable multi-core computational engine, generates
 ## Multi-platform binaries and Docker/Singularity containers
 
 Binaries for Linux, macOS and Windows platforms can be found in folder `binaries`.  
-Docker container can be found at ...  
-Singularity container can be found at ...
+PaCBAM is containerized from Docker and Singularity hubs.
 
 ## Compilation from source code
 
