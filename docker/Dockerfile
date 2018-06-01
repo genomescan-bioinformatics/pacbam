@@ -1,4 +1,4 @@
-FROM debian:jessie-slim AS build
+FROM debian:buster-slim AS build
 
 # ARG pkg_version
 
@@ -15,7 +15,7 @@ RUN apt-get update                                               && \
     cd pacbam                                                    && \
     make -f Makefile.linux
 
-FROM debian:jessie-slim
+FROM debian:buster-slim
 
 
 RUN apt-get update                       && \
