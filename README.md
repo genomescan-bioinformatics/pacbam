@@ -209,7 +209,7 @@ The report scripts expects as input the prefix of the output files from PaCBAM a
 
 ```
 Usage:
- ./report.py -i/--input string -m/--mode int [-o/--output string] [-s/--strandBias]
+ ./pacbam_report.py -i/--input string -m/--mode int [-o/--output string] [-s/--strandBias]
 
 -i INPUT, --input INPUT
 	Specify the input file prefix
@@ -234,7 +234,7 @@ StrandBias reporting is available only in modes 0 and 1.
 The following command computes the visual reports for the example data.
 
 ```
-./report.py -i example/NGSData -m 1 -o reports/reports.pdf
+./pacbam_report.py -i example/NGSData -m 1 -o reports/reports.pdf
 
 ```
 
