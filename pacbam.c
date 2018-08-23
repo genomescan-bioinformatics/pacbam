@@ -15,6 +15,12 @@
 #endif
 
 int MAX_READ_BUFF=1000000;
+int MAX_DUP=1;
+int MAX_CHR=100;
+char **BED_CHR;
+char **VCF_CHR;
+char **ORD_CHR;
+
 #define CHUNK_SIZE 32768
 
 ///////////////////////////////////////////////////////////
@@ -34,8 +40,6 @@ struct input_args
     int mbq;
     int mrq;
     int mdc;
-    //int reads_info;
-    //int dups_info;
     int dupmode;
     int strand_bias;
     float region_perc;
@@ -60,8 +64,6 @@ struct input_args *getInputArgs(char *argv[],int argc)
     arguments->duptablename = NULL;
     arguments->outdir = (char *)malloc(3);
     sprintf(arguments->outdir,"./");
-    //arguments->reads_info = 0;
-    //arguments->dups_info = 0;
     arguments->region_perc = 0.5;
     
     char *tmp=NULL;
@@ -105,13 +107,13 @@ struct input_args *getInputArgs(char *argv[],int argc)
             strcpy(arguments->duptablename,argv[i]+7);
 			subSlash(arguments->duptablename);
         }
-        else if( strncmp(argv[i],"dupmode=",8) == 0 )
+        /*else if( strncmp(argv[i],"dupmode=",8) == 0 )
         {
             tmp = (char*)malloc(strlen(argv[i])-7);
             strcpy(tmp,argv[i]+8);
             arguments->dupmode = atoi(tmp);
             free(tmp);
-        }
+        }*/
         else if( strncmp(argv[i],"threads=",8) == 0 )
         {
             tmp = (char*)malloc(strlen(argv[i])-7);
@@ -144,22 +146,8 @@ struct input_args *getInputArgs(char *argv[],int argc)
         {
             arguments->outdir = (char*)malloc(strlen(argv[i])-3);
             strcpy(arguments->outdir,argv[i]+4);
-	    subSlash(arguments->outdir);
+	   		subSlash(arguments->outdir);
         }
-        /*else if( strncmp(argv[i],"readsinfo=",10) == 0 )
-        {
-            tmp = (char*)malloc(strlen(argv[i])-9);
-            strcpy(tmp,argv[i]+10);
-            arguments->reads_info = atoi(tmp);
-            free(tmp);
-        }
-        else if( strncmp(argv[i],"dupsinfo=",9) == 0 )
-        {
-            tmp = (char*)malloc(strlen(argv[i])-8);
-            strcpy(tmp,argv[i]+9);
-            arguments->dups_info = atoi(tmp);
-            free(tmp);
-        }*/
         else if( strncmp(argv[i],"regionperc=",11) == 0 )
         {
             tmp = (char*)malloc(strlen(argv[i])-10);
@@ -180,40 +168,48 @@ struct input_args *getInputArgs(char *argv[],int argc)
     return arguments;
 }
 
+// Check existance of a file
+int checkFileExistance(char *file_name)
+{
+	FILE *file;
+	if (file_name == NULL)
+		return(1);
+	if(fopen(file_name,"r") == NULL)
+		return(2);
+	return(0);
+}
 
 int checkInputArgs(struct input_args *arguments)
 {
 	int control = 0;
-	if (arguments->cores <=0)
+	int vcf_control = 0;
+    
+	if (arguments->cores<=0)
 	{
 		fprintf(stderr,"ERROR: the number of threads is not valid.\n");
 		control=1;
 	}
-	if (arguments->bed == NULL)
+	if (control=checkFileExistance(arguments->bed))
 	{
-		fprintf(stderr,"ERROR: you should specify the captured regions BED file.\n");
+		fprintf(stderr,"ERROR: File BED does not exist or is not specified.\n");
+	}
+	if (control=checkFileExistance(arguments->bam))
+	{
+		fprintf(stderr,"ERROR: File BAM does not exist or is not specified.\n");
+	}
+	if (vcf_control=checkFileExistance(arguments->vcf)==2)
+	{
+		fprintf(stderr,"ERROR: File VCF does not exist.\n");
+	}
+	if (control=checkFileExistance(arguments->fasta))
+	{
+		fprintf(stderr,"ERROR: File FASTA does not exist or is not specified.\n");
+	}
+	if (checkFileExistance(arguments->duptablename)==2)
+	{
+		fprintf(stderr,"ERROR: File Duplicates table does not exist.\n");
 		control=1;
 	}
-	if (arguments->bam == NULL)
-	{
-		fprintf(stderr,"ERROR: you should specify the BAM file.\n");
-		control=1;
-	}
-	if (arguments->vcf == NULL)
-	{
-		fprintf(stderr,"ERROR: you should specify the SNPs VCF file.\n");
-		control=1;
-	}
-	if (arguments->fasta == NULL)
-	{
-		fprintf(stderr,"ERROR: you should specify a reference genome FASTA file.\n");
-		control=1;
-	}
-	/*if (arguments->dupmode > 1 || arguments->dupmode < 0)
-	{
-		fprintf(stderr,"ERROR: dupmode is 0 or 1.\n");
-		control=1;
-	}*/
 	if (arguments->mbq < 0)
 	{
 		fprintf(stderr,"ERROR: minimum base quality should be positive.\n");
@@ -231,12 +227,17 @@ int checkInputArgs(struct input_args *arguments)
 	}
 	if (arguments->mode < 0 || arguments->mode > 5)
 	{
-		fprintf(stderr,"ERROR: mode should be in 0,1,2,3,4.\n");
+		fprintf(stderr,"ERROR: mode should be in 0,1,2,3,4,5.\n");
 		control=1;
 	}
 	if (arguments->region_perc < 0 || arguments->region_perc > 1)
 	{
 		fprintf(stderr,"ERROR: Region fraction should be in the range [0,1].\n");
+		control=1;
+	}
+	if((arguments->mode==0|arguments->mode==1|arguments->mode==2|arguments->mode==5)&&vcf_control==1)
+	{
+		fprintf(stderr,"ERROR: Selected mode requires the specification of a VCF file.\n");
 		control=1;
 	}
 	if(control==1)
@@ -248,8 +249,8 @@ void printArguments(struct input_args *arguments)
 {
 	if (arguments->duptablename!=NULL)
 	{
-		fprintf(stderr," BAM=%s\n BED=%s\n VCF=%s\n FASTA=%s\n DUPTAB=%s\n MODE=%d\n MBQ=%d\n MRQ=%d\n MDC=%d\n THREADS=%d\n OUT=%s\n REGIONPERC=%f\n",
-		arguments->bam,arguments->bed,arguments->vcf,arguments->fasta,arguments->duptablename,arguments->mode,
+		fprintf(stderr," BAM=%s\n BED=%s\n VCF=%s\n FASTA=%s\n DUPTAB=%s\n MAXDUP=%d\n MODE=%d\n MBQ=%d\n MRQ=%d\n MDC=%d\n THREADS=%d\n OUT=%s\n REGIONPERC=%f\n",
+		arguments->bam,arguments->bed,arguments->vcf,arguments->fasta,arguments->duptablename,MAX_DUP,arguments->mode,
 		arguments->mbq,arguments->mrq,arguments->mdc,arguments->cores,arguments->outdir,arguments->region_perc);
 	} else
 	{
@@ -268,7 +269,6 @@ void printHelp()
     fprintf(stderr,"fasta=string \n Reference genome FASTA format file \n");
     fprintf(stderr,"mode=string \n Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]\n (default 0)\n");  
     fprintf(stderr,"duptab=string \n On-the-fly duplicates filtering lookup table\n");  
-    //fprintf(stderr,"dupmode=int \n Dedup mode [0=no cigar check|1=cigar check]\n");  
     fprintf(stderr,"threads=int \n Number of threads used (if available) for the pileup computation\n (default 1)\n");
     fprintf(stderr,"regionperc=float \n Fraction of the captured region to consider for maximum peak signal characterization\n (default 0.5)\n");
     fprintf(stderr,"mbq=int \n Min base quality\n (default 20)\n");
@@ -276,51 +276,6 @@ void printHelp()
     fprintf(stderr,"mdc=int \n Min depth of coverage that a position should have to be considered in the output\n (default 0)\n");
     fprintf(stderr,"strandbias \n Print strand bias count information\n (default 1)\n");
     fprintf(stderr,"out=string \n Path of output directory (default is the current directory)\n\n");
-}
-
-///////////////////////////////////////////////////////////
-// Counter list
-///////////////////////////////////////////////////////////
-
-struct Cnode
-{
-  int pos;
-  int number;
-  struct Clist *next;
-};
-
-typedef struct Cnode Clist;
-
-Clist *addClist(Clist *list, int npos)
-{
-  Clist *tmp = list;
-  while (list!=NULL)
-  {
-  	if(list->pos==npos)
-  	{
-  		list->number++;
-  		return(tmp);
-  	}
-  	list = list->next;
-  }
-  Clist *link = (struct Cnode*)malloc(sizeof(struct Cnode));
-  link->pos = npos;
-  link->number = 1;
-  link->next = tmp;
-  return (link);
-}
-
-void printClist(Clist *list, FILE *outfile)
-{
-  if (list==NULL)
-  	fprintf(outfile,"NA");
-  while (list!=NULL)
-  {
-  	fprintf(outfile,"%d:%d",list->pos,list->number);
-	list = list->next;
-	if(list!=NULL)
-		fprintf(outfile,"|");
-  }
 }
 
 
@@ -334,16 +289,16 @@ struct Dnode
   int pos_pair;
   int chr_pair;
   int number;
-  uint32_t *cigar;
-  uint32_t lcigar;
-  uint8_t md;
+  //uint32_t *cigar;
+  //uint32_t lcigar;
+  //uint8_t md;
   int strand;
   struct Dlist *next;
 };
 
 typedef struct Dnode Dlist;
 
-Dlist *addDlistCIGAR(Dlist *list, int npos, int npos_pair, int nchr_pair, uint32_t *ncigar, uint32_t nlcigar, int nstrand, uint8_t nmd)
+/*Dlist *addDlistCIGAR(Dlist *list, int npos, int npos_pair, int nchr_pair, uint32_t *ncigar, uint32_t nlcigar, int nstrand, uint8_t nmd)
 {
   Dlist *tmp = list;
   int check_cigar;
@@ -381,90 +336,55 @@ Dlist *addDlistCIGAR(Dlist *list, int npos, int npos_pair, int nchr_pair, uint32
   link->md = nmd;
   link->next = tmp;
   return (link);
-}
-
-Dlist *addDlist(Dlist *list, int npos, int npos_pair, int nchr_pair, int nstrand)
-{
-  Dlist *tmp = list;
-  while (list!=NULL)
-  {
-  	if(list->pos==npos && list->pos_pair==npos_pair && list->chr_pair==nchr_pair && list->strand==nstrand)
-  	{
-  		list->number++;
-  		return(tmp);
-  	}
-  	list = list->next;
-  }
-  Dlist *link = (struct Dnode*)malloc(sizeof(struct Dnode));
-  link->pos = npos;
-  link->pos_pair = npos_pair;
-  link->chr_pair = nchr_pair;
-  link->number = 1;
-  link->cigar = NULL;
-  link->lcigar = 0;
-  link->strand = nstrand;
-  link->md = 0;
-  link->next = tmp;
-  return (link);
-}
-
-/*int getDlistNumber(Dlist *list, int npos, int npos_pair, int nchr_pair, uint32_t ncigar, int nstrand, uint8_t nmd)
-{
-  Dlist *tmp = list;
-  while (list!=NULL)
-  {
-  	if(list->pos==npos && list->pos_pair==npos_pair && list->chr_pair==nchr_pair && list->cigar==ncigar && list->strand==nstrand && list->md==nmd)
-  	{
-  		return(list->number);
-  	}
-  	list = list->next;
-  }
-  return (0);
 }*/
 
-int liftDlistNumber(Dlist *list,int thr_cov)
+Dlist *addDlist(Dlist *list, int *list_counts, int npos, int npos_pair, int nchr_pair, int nstrand)
 {
-  Dlist *tmp = list;
-  while (list!=NULL)
-  {
-  	if(list->number>thr_cov)
-  		list->number = thr_cov;
-  	list = list->next;
-  }
+	Dlist *tmp = list;
+	// Assumes reads in the pileup area ordered by position
+	if(list!=NULL && npos>list->pos)
+	{
+		countAndFreeDlist(tmp,list_counts);
+		list = NULL;
+	} 
+	
+	tmp = list;	
+	while (list!=NULL)
+	{
+		if(list->pos==npos && list->pos_pair==npos_pair && list->chr_pair==nchr_pair && list->strand==nstrand)
+		{
+			list->number++;
+			return(tmp);
+		}
+		list = list->next;
+	}
+	Dlist *link = (struct Dnode*)malloc(sizeof(struct Dnode));
+	link->pos = npos;
+	link->pos_pair = npos_pair;
+	link->chr_pair = nchr_pair;
+	link->number = 1;
+	//link->cigar = NULL;
+	//link->lcigar = 0;
+	link->strand = nstrand;
+	//link->md = 0;
+	link->next = tmp;
+	return(link);
 }
 
-int coverageDlist(Dlist *list)
+void countAndFreeDlist(Dlist *list, int *list_counts)
 {
-  Dlist *tmp = list;
-  int cov=0;
-  while (list!=NULL)
-  {
-  	cov+=list->number;
-  	list = list->next;
-  }
-  return(cov);
-}
-
-void freeDlist(Dlist *list)
-{
+	int idx;
 	Dlist *tmp;
 	while (list!=NULL)
   	{
+		idx = list->number-1;
+		if(idx>(MAX_DUP-1))
+			idx=MAX_DUP-1;
+		list_counts[idx]++;
 	  	tmp = list;
   		list = list->next;
   		free(tmp);
   	}
-}
-
-Clist *fromDtoClist(Dlist *list)
-{
-	Clist *nlist = NULL;
-	while (list!=NULL)
-  	{
-	  	nlist = addClist(nlist,list->number);
-  		list = list->next;
-  	}
-	return(nlist);
 }
 
 void printDlist(Dlist *list)
@@ -473,7 +393,7 @@ void printDlist(Dlist *list)
   	fprintf(stderr,"NA");
   while (list!=NULL)
   {
-  	fprintf(stderr,"%d:%d",list->pos,list->number);
+  	fprintf(stderr,"%d-%d:%d",list->pos,list->pos_pair,list->number);
 	list = list->next;
 	if(list!=NULL)
 		fprintf(stderr,"|");
@@ -547,7 +467,6 @@ struct lookup_dup
     int *covs_up;
     int *covs_down;
     int *thresholds;
-    int *counters;
 };
 
 
@@ -563,21 +482,7 @@ int getThrDupLookup(struct lookup_dup *duptable, int cov)
 		if(cov>=duptable->covs_down[i]&&cov<duptable->covs_up[i])
 			return(duptable->thresholds[i]);
 	}
-	return(1000);
-}
-
-void incDupTableCounter(struct lookup_dup *duptable, int cov)
-{
-	int i;
-	if(cov<duptable->covs_down[0])
-		duptable->counters[0]++;
-	if(cov>=duptable->covs_up[(duptable->length)-1])
-		duptable->counters[(duptable->length)-1]++;	
-	for(i=0;i<duptable->length;i++)
-	{
-		if(cov>=duptable->covs_down[i]&&cov<duptable->covs_up[i])
-			duptable->counters[i];
-	}
+	return(10000);
 }
 
 struct pos_pileup
@@ -591,10 +496,6 @@ struct pos_pileup
     int Csb;
     int Gsb;
     int Tsb;
-    Clist *A_dup;
-    Clist *C_dup;
-    Clist *G_dup;
-    Clist *T_dup;
 };
 
 // Data for a single region
@@ -685,7 +586,7 @@ void incBaseStrand(struct pos_pileup *elem, int val, int strand)
 
 
 // Increments the number of duplicated reads per base considering also CIGAR
-void incBaseDupCIGAR(Dlist *dup[], int val, int pos, int pos_pair, int chr_pair, uint32_t *cigar, uint32_t lcigar, uint8_t md, int strand)
+/*void incBaseDupCIGAR(Dlist *dup[], int val, int pos, int pos_pair, int chr_pair, uint32_t *cigar, uint32_t lcigar, uint8_t md, int strand)
 {
     if (val==1)
         dup[0] = addDlistCIGAR(dup[0],pos,pos_pair,chr_pair,cigar,lcigar,md,strand);
@@ -695,68 +596,142 @@ void incBaseDupCIGAR(Dlist *dup[], int val, int pos, int pos_pair, int chr_pair,
         dup[2] = addDlistCIGAR(dup[2],pos,pos_pair,chr_pair,cigar,lcigar,md,strand);
     else if (val==8)
         dup[3] = addDlistCIGAR(dup[3],pos,pos_pair,chr_pair,cigar,lcigar,md,strand);
-}
-
-// Increments the number of duplicated reads per base
-void incBaseDup(Dlist *dup[], int val, int pos, int pos_pair, int chr_pair, int strand)
-{
-    if (val==1)
-        dup[0] = addDlist(dup[0],pos,pos_pair,chr_pair,strand);
-    else if (val==2)
-        dup[1] = addDlist(dup[1],pos,pos_pair,chr_pair,strand);
-    else if (val==4)
-        dup[2] = addDlist(dup[2],pos,pos_pair,chr_pair,strand);
-    else if (val==8)
-        dup[3] = addDlist(dup[3],pos,pos_pair,chr_pair,strand);
-}
-
-// Get the number of duplicates for a certain read per base
-/*int getBaseDup(Dlist *dup[], int val, int pos, int pos_pair, int chr_pair, uint32_t cigar, uint8_t md, int strand)
-{
-    if (val==1)
-        return(getDlistNumber(dup[0],pos,pos_pair,chr_pair,cigar,md,strand));
-    else if (val==2)
-        return(getDlistNumber(dup[1],pos,pos_pair,chr_pair,cigar,md,strand));
-    else if (val==4)
-        return(getDlistNumber(dup[2],pos,pos_pair,chr_pair,cigar,md,strand));
-    else if (val==8)
-        return(getDlistNumber(dup[3],pos,pos_pair,chr_pair,cigar,md,strand));
 }*/
 
-// Lift the number of duplicates for all bases
-void liftBaseDup(Dlist *dup[],int thr_cov)
+// Increments the number of duplicated reads per base
+void incBaseDup(Dlist *dup[], int *dup_counts[], int val, int pos, int pos_pair, int chr_pair, int strand)
 {
-    liftDlistNumber(dup[0],thr_cov);
-    liftDlistNumber(dup[1],thr_cov);
-    liftDlistNumber(dup[2],thr_cov);
-    liftDlistNumber(dup[3],thr_cov);
+    if (val==1)
+        dup[0] = addDlist(dup[0],dup_counts[0],pos,pos_pair,chr_pair,strand);
+    else if (val==2)
+        dup[1] = addDlist(dup[1],dup_counts[1],pos,pos_pair,chr_pair,strand);
+    else if (val==4)
+        dup[2] = addDlist(dup[2],dup_counts[2],pos,pos_pair,chr_pair,strand);
+    else if (val==8)
+        dup[3] = addDlist(dup[3],dup_counts[3],pos,pos_pair,chr_pair,strand);
 }
 
 // Compute coverage of bases by duplicates lists
-void computeCovBaseDup(Dlist *dup[],struct pos_pileup *elem)
+void computeCovBaseDup(int *dup_counts[], struct pos_pileup *elem, int thr_cov)
 {
-    elem->A = coverageDlist(dup[0]);
-    elem->C = coverageDlist(dup[1]);
-    elem->G = coverageDlist(dup[2]);
-    elem->T = coverageDlist(dup[3]);
+	int i;
+	elem->A = 0;
+	for(i=0;i<MAX_DUP;i++)
+	{
+		if(i<=(thr_cov-1))
+		{
+			elem->A += (i+1)*dup_counts[0][i];
+		} else
+		{
+			elem->A += thr_cov*dup_counts[0][i];
+		}
+	}
+	elem->C = 0;
+	for(i=0;i<MAX_DUP;i++)
+	{
+		if(i<=(thr_cov-1))
+		{
+			elem->C += (i+1)*dup_counts[1][i];
+		} else
+		{
+			elem->C += thr_cov*dup_counts[1][i];
+		}
+	}
+	elem->G = 0;
+	for(i=0;i<MAX_DUP;i++)
+	{
+		if(i<=(thr_cov-1))
+		{
+			elem->G += (i+1)*dup_counts[2][i];
+		} else
+		{
+			elem->G += thr_cov*dup_counts[2][i];
+		}
+	}
+	elem->T = 0;
+	for(i=0;i<MAX_DUP;i++)
+	{
+		if(i<=(thr_cov-1))
+		{
+			elem->T += (i+1)*dup_counts[3][i];
+		} else
+		{
+			elem->T += thr_cov*dup_counts[3][i];
+		}
+	}
+    //elem->T = coverageDlist(dup_counts[3],thr_cov);
+}
+
+void mergeBEDVCFCHRLists(char **vcf, char **bed, char **merge)
+{
+	int i=0,j=0,k=0,l,n;
+	while(vcf[i]!=NULL)
+	{
+		l = j;
+		while(bed[l]!=NULL)
+		{
+			if(strcmp(vcf[i],bed[l])==0)
+				break;
+			l++;
+		}
+		if(bed[l]==NULL)
+		{
+			merge[k] = (char *)malloc(sizeof(char)*strlen(vcf[i])+1);
+			strcpy(merge[k],vcf[i]);
+			subSlash(merge[k]);
+			k++;
+			i++;
+		} else
+		{
+			for(n=j;n<=l;n++)
+			{
+				merge[k] = (char *)malloc(sizeof(char)*strlen(bed[n])+1);
+				strcpy(merge[k],bed[n]);
+				subSlash(merge[k]);
+				k++;
+			}
+			j = l+1;
+			i++;
+		}
+	}
+	while(bed[j]!=NULL)
+	{
+		merge[k] = (char *)malloc(sizeof(char)*strlen(bed[n])+1);
+		strcpy(merge[k],bed[n]);
+		subSlash(merge[k]);
+		k++;
+		j++;
+	}
+}
+
+void printCHR(char **elems)
+{
+	time_t current_time;
+    char* c_time_string;
+	current_time = time(NULL);
+	c_time_string = ctime(&current_time);
+	c_time_string[strlen(c_time_string)-1] = '\0';
+	fprintf(stderr,"[%s] Loaded chromosomes: ",c_time_string);
+	int i=0;
+	while(elems[i]!=NULL)
+	{
+		printf("%s",elems[i]);
+		if(elems[i+1]!=NULL)
+			printf(",");
+		i++;
+	}
+	printf("\n");
 }
 
 int getChrPos(char *chr)
 {
-    int idx = 0;
-    if (strncmp(chr,"chr",3)==0)
-    		idx=3;
-    		
-    int val = atoi(chr+idx);
-    if (val>0 && val<=22)
-        return(val-1);
-    if (strncmp(chr,"X",1)==0)
-        return(22);
-    if (strncmp(chr,"Y",1)==0)
-        return(23);
-    if (strncmp(chr,"M",1)==0)
-        return(24);
-    return(-1);
+    int i=0;
+    while(ORD_CHR[i]!=NULL)
+    {
+    	if(strcmp(ORD_CHR[i],chr)==0)
+    		return(i);
+    	i++;
+    }
 }
 
 int getBaseCount(struct region_data *elem, char *s, int index)
@@ -793,20 +768,22 @@ int getSum(struct region_data *elem, int index)
 
 int CheckAlt(struct target_t *elem, int index)
 {
+	if (elem->sequence==NULL)
+		return(0);
 	if(elem->sequence[index]=='A')
 	{
     		return(elem->rdata->positions[index].C+elem->rdata->positions[index].G+elem->rdata->positions[index].T);
-    	} else if(elem->sequence[index]=='C')
+    } else if(elem->sequence[index]=='C')
 	{
     		return(elem->rdata->positions[index].A+elem->rdata->positions[index].G+elem->rdata->positions[index].T);
-    	} else if(elem->sequence[index]=='G')
+    } else if(elem->sequence[index]=='G')
 	{
     		return(elem->rdata->positions[index].A+elem->rdata->positions[index].C+elem->rdata->positions[index].T);
-    	} else if(elem->sequence[index]=='T')
+    } else if(elem->sequence[index]=='T')
 	{
     		return(elem->rdata->positions[index].A+elem->rdata->positions[index].C+elem->rdata->positions[index].G);
-    	}
-    	return(0);
+    }
+    return(0);
 }
 
 // Returns read count of alternative allele
@@ -820,9 +797,9 @@ int FindAlternative(struct region_data *elem, char *s, int index,char *alt)
     	sprintf(alt,"C");
     	max = elem->positions[index].C;
     	if(max<elem->positions[index].G) { max = elem->positions[index].G; sprintf(alt,"G"); } 
-	if(max<elem->positions[index].T) { max = elem->positions[index].T; sprintf(alt,"T"); } 
-	if( (max==elem->positions[index].C)+(max==elem->positions[index].G)+(max==elem->positions[index].T)>1 ) { sprintf(alt,"N"); return(0); }
-	return(max);
+		if(max<elem->positions[index].T) { max = elem->positions[index].T; sprintf(alt,"T"); } 
+		if( (max==elem->positions[index].C)+(max==elem->positions[index].G)+(max==elem->positions[index].T)>1 ) { sprintf(alt,"N"); return(0); }
+		return(max);
     }
     
     if(strncmp(s,"C",1)==0)
@@ -830,9 +807,9 @@ int FindAlternative(struct region_data *elem, char *s, int index,char *alt)
     	sprintf(alt,"A");
     	max = elem->positions[index].A;
     	if(max<elem->positions[index].G) { max = elem->positions[index].G; sprintf(alt,"G"); }
-	if(max<elem->positions[index].T) { max = elem->positions[index].T; sprintf(alt,"T"); }
-	if( (max==elem->positions[index].A)+(max==elem->positions[index].G)+(max==elem->positions[index].T)>1 ) { sprintf(alt,"N"); return(0); }
-	return(max);
+		if(max<elem->positions[index].T) { max = elem->positions[index].T; sprintf(alt,"T"); }
+		if( (max==elem->positions[index].A)+(max==elem->positions[index].G)+(max==elem->positions[index].T)>1 ) { sprintf(alt,"N"); return(0); }
+		return(max);
     }
     
     if(strncmp(s,"G",1)==0)
@@ -840,9 +817,9 @@ int FindAlternative(struct region_data *elem, char *s, int index,char *alt)
     	sprintf(alt,"C");
     	max = elem->positions[index].C;
     	if(max<elem->positions[index].A) { max = elem->positions[index].A; sprintf(alt,"A"); }
-	if(max<elem->positions[index].T) { max = elem->positions[index].T; sprintf(alt,"T"); }
-	if( (max==elem->positions[index].C)+(max==elem->positions[index].A)+(max==elem->positions[index].T)>1 ) { sprintf(alt,"N"); return(0); }
-	return(max);
+		if(max<elem->positions[index].T) { max = elem->positions[index].T; sprintf(alt,"T"); }
+		if( (max==elem->positions[index].C)+(max==elem->positions[index].A)+(max==elem->positions[index].T)>1 ) { sprintf(alt,"N"); return(0); }
+		return(max);
     }
     
     if(strncmp(s,"T",1)==0)
@@ -850,9 +827,9 @@ int FindAlternative(struct region_data *elem, char *s, int index,char *alt)
     	sprintf(alt,"C");
     	max = elem->positions[index].C;
     	if(max<elem->positions[index].G) { max = elem->positions[index].G; sprintf(alt,"G"); }
-	if(max<elem->positions[index].A) { max = elem->positions[index].A; sprintf(alt,"A"); }
-	if( (max==elem->positions[index].C)+(max==elem->positions[index].G)+(max==elem->positions[index].A)>1 ) { sprintf(alt,"N"); return(0); }
-	return(max);
+		if(max<elem->positions[index].A) { max = elem->positions[index].A; sprintf(alt,"A"); }
+		if( (max==elem->positions[index].C)+(max==elem->positions[index].G)+(max==elem->positions[index].A)>1 ) { sprintf(alt,"N"); return(0); }
+		return(max);
     }
         
     return(0);
@@ -883,10 +860,19 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
     uint32_t *cigar,lcigar;
     uint8_t *md;
     int thr_cov;
-    Dlist *dup[4];
-    if (tmp->arguments->duptablename != NULL) //|| tmp->arguments->dups_info == 1)
+	Dlist *dup[4];
+	int *dup_counts[4];
+    if (tmp->arguments->duptablename != NULL) 
     {
     	dup[0] = dup[1] = dup[2] = dup[3] = NULL;
+		dup_counts[0] = (int *)malloc(sizeof(int)*MAX_DUP);
+		dup_counts[1] = (int *)malloc(sizeof(int)*MAX_DUP);
+		dup_counts[2] = (int *)malloc(sizeof(int)*MAX_DUP);
+		dup_counts[3] = (int *)malloc(sizeof(int)*MAX_DUP);
+		for(i=0;i<MAX_DUP;i++)
+		{
+			dup_counts[0][i] = dup_counts[1][i] = dup_counts[2][i] = dup_counts[3][i] = 0; 
+		}
     }
 
     if ((int)pos >= tmp->beg && (int)pos < tmp->end)
@@ -894,35 +880,33 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 		for(i=0; i<n; i++)
 		{
 			qual = bam1_qual(pl[i].b);
-			if (!(qual[pl[i].qpos] < tmp->arguments->mbq || pl[i].b->core.qual < tmp->arguments->mrq || 
-				pl[i].is_del != 0 || pl[i].indel != 0 || pl[i].is_refskip != 0 || (pl[i].b->core.flag & BAM_DEF_MASK))) 
+			if (!(
+				qual[pl[i].qpos] < tmp->arguments->mbq ||
+				pl[i].b->core.qual < tmp->arguments->mrq || 
+				pl[i].is_del != 0 || 
+				pl[i].indel < 0 || // only deletion 
+				pl[i].is_refskip != 0 || 
+				(pl[i].b->core.flag & BAM_DEF_MASK))) 
 			{
 				incBase(&(tmp->positions[pos-tmp->beg]),bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos));
 				if (tmp->arguments->strand_bias == 1)
 					incBaseStrand(&(tmp->positions[pos-tmp->beg]),bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),bam1_strand(pl[i].b));
-				if (tmp->arguments->duptablename != NULL) //tmp->arguments->dups_info == 1 || 
+				if (tmp->arguments->duptablename != NULL) 
 				{
-					if(tmp->arguments->dupmode==1)
+					/*if(tmp->arguments->dupmode==1)
 					{
 						md = bam_aux_get(pl[i].b,"MD");
 						cigar = bam1_cigar(pl[i].b);
 						lcigar = pl[i].b->core.n_cigar;
 						incBaseDupCIGAR(&dup,bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),(pl[i].b->core.pos)+1,(pl[i].b->core.mpos)+1,pl[i].b->core.mtid,cigar,lcigar,*md,bam1_strand(pl[i].b));
 					} else
-					{
-						incBaseDup(&dup,bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),(pl[i].b->core.pos)+1,(pl[i].b->core.mpos)+1,pl[i].b->core.mtid,bam1_strand(pl[i].b));
-					}	
+					{*/
+						incBaseDup(&dup,&dup_counts,bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),(pl[i].b->core.pos)+1,(pl[i].b->core.mpos)+1,pl[i].b->core.mtid,bam1_strand(pl[i].b));
+					//}	
 				}
 			 }
 		}
-        
-	//	if (tmp->arguments->dups_info == 1)
-	//	{
-	//		tmp->positions[pos-tmp->beg].A_dup = fromDtoClist(dup[0]);
-	//		tmp->positions[pos-tmp->beg].C_dup = fromDtoClist(dup[1]);
-	//		tmp->positions[pos-tmp->beg].G_dup = fromDtoClist(dup[2]);
-	//		tmp->positions[pos-tmp->beg].T_dup = fromDtoClist(dup[3]);
-	//	}
+
 
 		if (tmp->arguments->duptablename != NULL)
 		{
@@ -931,18 +915,11 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 						  tmp->positions[pos-tmp->beg].C+
 						  tmp->positions[pos-tmp->beg].G+
 						  tmp->positions[pos-tmp->beg].T);
-			// lift values with threshold
-			liftBaseDup(&dup,thr_cov);
 			// recompute base coverage after lifting
-			computeCovBaseDup(&dup,&(tmp->positions[pos-tmp->beg]));  
-
-			freeDlist(dup[0]);freeDlist(dup[1]);freeDlist(dup[2]);freeDlist(dup[3]);
+			countAndFreeDlist(dup[0],dup_counts[0]);countAndFreeDlist(dup[1],dup_counts[1]);countAndFreeDlist(dup[2],dup_counts[2]);countAndFreeDlist(dup[3],dup_counts[3]);
+			computeCovBaseDup(&dup_counts,&(tmp->positions[pos-tmp->beg]),thr_cov);  
+			free(dup_counts[0]);free(dup_counts[1]);free(dup_counts[2]);free(dup_counts[3]);
 		}
-
-	//	if (tmp->arguments->dups_info == 1 || tmp->arguments->duptablename != NULL)
-	//	{
-	//		freeDlist(dup[0]);freeDlist(dup[1]);freeDlist(dup[2]);freeDlist(dup[3]);
-	//	}
         
     }
     
@@ -1063,7 +1040,6 @@ struct lookup_dup* loadDUPLookupTable(char *file_name)
     table->covs_down = malloc(sizeof(int)*number_of_lines);
     table->covs_up = malloc(sizeof(int)*number_of_lines);
     table->thresholds = malloc(sizeof(int)*number_of_lines);
-    table->counters = malloc(sizeof(int)*number_of_lines);
     table->length = number_of_lines;
     
     int index = 0;
@@ -1107,21 +1083,34 @@ struct lookup_dup* loadDUPLookupTable(char *file_name)
         table->covs_down[index] = atoi(str_tokens[0]);
         table->covs_up[index] = atoi(str_tokens[1]);
         table->thresholds[index] = atoi(str_tokens[2]);
-        table->counters[index] = 0;
-        index++;
-        line_numb++;
-    }
+		if (table->thresholds[index]>MAX_DUP)
+			MAX_DUP = table->thresholds[index];
+
+		if (table->covs_down[index]<0||table->covs_up[index]<0||table->thresholds[index]<0)
+		{
+		        fprintf(stderr,"ERROR: at line %d values are not correct).\n",line_numb);
+		        exit(1);
+		}
+		if (table->covs_down[index]>=table->covs_up[index])
+		{
+			fprintf(stderr,"ERROR: at line %d values do not define a coverage interval.\n",line_numb);
+		        exit(1);
+		}
+
+		index++;
+		line_numb++;
+	}
     
-    return(table);
+	return(table);
 }
 
 struct target_info* loadTargetBed(char *file_name)
 {
     FILE *file = fopen(file_name,"r");
-    char *seq,*tmp_seq,s[200],stmp[200];
-    int i,len;
+    char *seq,*tmp_seq,s[200],stmp[200],prev_chr[20];
+    int i,len,prev_to,idx_chr;
     
-    if  (file==NULL)
+    if(file==NULL)
     {
         fprintf(stderr,"\nFile %s not present!!!\n",file_name);
         exit(1);
@@ -1153,6 +1142,8 @@ struct target_info* loadTargetBed(char *file_name)
     char sep_intervals[] = ",";
 
     int line_numb = 1;
+	idx_chr=0;
+	sprintf(prev_chr,"init");
 
     while(fgets(line,sizeof(line),file) != NULL )
     {
@@ -1191,6 +1182,43 @@ struct target_info* loadTargetBed(char *file_name)
         strcpy(current_elem->chr,str_tokens[0]);
         current_elem->from = atoi(str_tokens[1])+1;
         current_elem->to = atoi(str_tokens[2]);
+
+	// check ordering 
+	if(strcmp(current_elem->chr,prev_chr)!=0)
+	{
+		i=0;
+		while(BED_CHR[i]!=NULL)
+		{
+			if(strcmp(BED_CHR[i],current_elem->chr)==0)
+			{
+				fprintf(stderr,"ERROR: chromosomes are not ordered (line %d).\n",line_numb);
+				exit(1);	
+			}
+			i++;
+		}
+		sprintf(prev_chr,"%s",current_elem->chr);
+		BED_CHR[idx_chr] = (char *)malloc(sizeof(char)*strlen(current_elem->chr)+1);
+		strcpy(BED_CHR[idx_chr],current_elem->chr);
+		subSlash(BED_CHR[idx_chr]);
+		idx_chr++;
+		prev_to = 0;
+	} else
+	{
+		if(current_elem->from<=prev_to)
+		{
+			fprintf(stderr,"ERROR: genomic regions are not positionally ordered (line %d).\n",line_numb);
+			exit(1);
+		}
+
+		prev_to = current_elem->to;
+	}
+
+	if (current_elem->to-(current_elem->from-1)<1)
+	{
+		fprintf(stderr,"ERROR: genomic region at line %d has length <1.\n",line_numb);
+		exit(1);
+	}	
+
         if (str_tokens[3][strlen(str_tokens[3])-1]=='\n')
             size = strlen(str_tokens[3])-1;
         else
@@ -1198,20 +1226,20 @@ struct target_info* loadTargetBed(char *file_name)
             
         current_elem->sequence = NULL;
         current_elem->rdata = NULL;
-    	   current_elem->sequence = NULL;
-    	   current_elem->from_sel = 0;
-    	   current_elem->to_sel = 0;
-    	   current_elem->gc = 0;
-    	   current_elem->read_count = 0;
-    	   current_elem->read_count_global = 0; 
+		current_elem->sequence = NULL;
+		current_elem->from_sel = 0;
+		current_elem->to_sel = 0;
+		current_elem->gc = 0;
+		current_elem->read_count = 0;
+		current_elem->read_count_global = 0; 
 
-        target->info[index] = current_elem;
-	
-        index++;
-        line_numb++;
-    }
+		target->info[index] = current_elem;
+		
+		index++;
+		line_numb++;
+	}
 
-    return(target);
+	return(target);
 }
 
 
@@ -1222,8 +1250,12 @@ struct target_info* loadTargetBed(char *file_name)
 struct snps_info* loadSNPs(char *file_name)
 {
     FILE *file = fopen(file_name,"r");
-    char *seq,*tmp_seq,s[200],stmp[200];
-    int i,len;
+    char *seq,*tmp_seq,s[200],stmp[200],prev_chr[20];
+    int i,len,prev_pos,idx_chr;
+	char strA[] = "A";
+	char strC[] = "C";
+	char strG[] = "G";
+	char strT[] = "T";
     
     if  (file==NULL)
     {
@@ -1257,6 +1289,8 @@ struct snps_info* loadSNPs(char *file_name)
     char sep_intervals[] = ",";
 
     int line_numb = 1;
+	sprintf(prev_chr,"init");
+	idx_chr=0;
 
     while(fgets(line,sizeof(line),file) != NULL )
     {
@@ -1299,15 +1333,60 @@ struct snps_info* loadSNPs(char *file_name)
         current_elem->pos = atoi(str_tokens[1]);
         current_elem->rsid = (char*)malloc(strlen(str_tokens[2])+1);
         strcpy(current_elem->rsid,str_tokens[2]);
-	   current_elem->ref = (char*)malloc(strlen(str_tokens[3])+1);
+	   	current_elem->ref = (char*)malloc(strlen(str_tokens[3])+1);
         strcpy(current_elem->ref,str_tokens[3]);
-	   current_elem->alt = (char*)malloc(strlen(str_tokens[4])+1);
+	   	current_elem->alt = (char*)malloc(strlen(str_tokens[4])+1);
         strcpy(current_elem->alt,str_tokens[4]);
 
-        snps->info[index] = current_elem;
+		// check ordering 
+		if(strcmp(current_elem->chr,prev_chr)!=0)
+		{
+			i=0;
+			while(VCF_CHR[i]!=NULL)
+			{
+				if(strcmp(VCF_CHR[i],current_elem->chr)==0)
+				{
+					fprintf(stderr,"ERROR: chromosomes are not ordered (line %d).\n",line_numb);
+					exit(1);	
+				}
+				i++;
+			}
+			sprintf(prev_chr,"%s",current_elem->chr);
+			VCF_CHR[idx_chr] = (char *)malloc(sizeof(char)*strlen(current_elem->chr)+1);
+			strcpy(VCF_CHR[idx_chr],current_elem->chr);
+			subSlash(VCF_CHR[idx_chr]);
+			idx_chr++;
+			prev_pos = 0;
+		} else
+		{
+			if(current_elem->pos<=prev_pos)
+			{
+				fprintf(stderr,"ERROR: entries are not positionally ordered (line %d).\n",line_numb);
+            	exit(1);
+			}
+	
+			prev_pos = current_elem->pos;
+		}
 
-        index++;
-        line_numb++;
+		if (current_elem->pos<0)
+		{
+			fprintf(stderr,"ERROR: position at line %d is not valid.\n",line_numb);
+			exit(1);
+		}
+		if (strcmp(current_elem->ref,strA)!=0&&strcmp(current_elem->ref,strC)!=0&&strcmp(current_elem->ref,strG)!=0&&strcmp(current_elem->ref,strT)!=0)
+		{
+			fprintf(stderr,"ERROR: reference position at line %d is not a single base equal to A, C, G or T.\n",line_numb);
+			exit(1);
+		}
+		if (strcmp(current_elem->alt,strA)!=0&&strcmp(current_elem->alt,strC)!=0&&strcmp(current_elem->alt,strG)!=0&&strcmp(current_elem->alt,strT)!=0)
+		{
+			fprintf(stderr,"ERROR: alternative position at line %d is not a single base equal to A, C, G or T.\n",line_numb);
+			exit(1);
+		}
+
+		snps->info[index] = current_elem;
+		index++;
+		line_numb++;
     }
 
     return(snps);
@@ -1365,6 +1444,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 	// Buffer for pileup writing
 	char file_buffer[CHUNK_SIZE+1024] ;
 	int buffer_count = 0 ;
+	c=0;
 	
 	for (r=indexInit;r<indexEnd;r++)
 	{
@@ -1423,12 +1503,26 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 					}
 				}
 			}
-			
+
 			ctrl = 0;
 
 			if (snps!=NULL)
 			{
-				if(getChrPos(target_regions->info[r]->chr)==getChrPos(snps->info[j]->chr)&&
+				if(j<(snps->length-1))
+				 {
+					while (getChrPos(target_regions->info[r]->chr)>getChrPos(snps->info[j]->chr)||
+						(strcmp(target_regions->info[r]->chr,snps->info[j]->chr)==0&&
+						(i+target_regions->info[r]->from)>snps->info[j]->pos))
+					{
+						j++;
+						if(j==(snps->length)-1)
+						{
+							break;
+						}
+					}
+				 } 
+			
+				if(strcmp(target_regions->info[r]->chr,snps->info[j]->chr)==0&&
 					(i+target_regions->info[r]->from)==snps->info[j]->pos)
 				{
 					if (arguments->mode==5)
@@ -1459,27 +1553,13 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 							target_regions->info[r]->rdata->positions[i].G,
 							target_regions->info[r]->rdata->positions[i].T,
 							af,cov);
-					
-						/*if (arguments->dups_info == 1)
-						{
-							fprintf(outfileDUP,"%s\t%d",target_regions->info[r]->chr,target_regions->info[r]->from+i);
-							fprintf(outfileDUP,"\t");
-							printClist(target_regions->info[r]->rdata->positions[i].A_dup,outfileDUP);
-							fprintf(outfileDUP,"\t");
-							printClist(target_regions->info[r]->rdata->positions[i].C_dup,outfileDUP);
-							fprintf(outfileDUP,"\t");
-							printClist(target_regions->info[r]->rdata->positions[i].G_dup,outfileDUP);
-							fprintf(outfileDUP,"\t");
-							printClist(target_regions->info[r]->rdata->positions[i].T_dup,outfileDUP);
-							fprintf(outfileDUP,"\n");
-						}*/
 					}
-					postmp = snps->info[j]->pos;
+					//postmp = snps->info[j]->pos;
 					j++;
 					if(j>=snps->length)
 					{
 						j=snps->length-1;
-					} else
+					} /*else
 					{
 						while(snps->info[j]->pos==postmp)
 						{
@@ -1490,7 +1570,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 								break;
 							}
 						}
-					}
+					}*/
 				} else
 				{
 					ctrl = 1;
@@ -1518,15 +1598,6 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 					afG = 0;
 					if(covG>0)
 						afG=((float)altG)/((float)covG);
-					
-					/*fprintf(outfileALL,"%s\t%d\t%c\t%d\t%d\t%d\t%d\t%.6f\t%d\n",
-							target_regions->info[r]->chr,
-							target_regions->info[r]->from+i,
-							target_regions->info[r]->sequence[i],
-							target_regions->info[r]->rdata->positions[i].A,
-							target_regions->info[r]->rdata->positions[i].C,
-							target_regions->info[r]->rdata->positions[i].G,
-							target_regions->info[r]->rdata->positions[i].T,afG,covG);*/
 							
 					buffer_count += sprintf(&file_buffer[buffer_count],"%s\t%d\t%c\t%d\t%d\t%d\t%d\t%.6f\t%d\n",
 							target_regions->info[r]->chr,
@@ -1587,26 +1658,8 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 				}
 			}
 			
-			c=0;
-			if(snps!=NULL)
-			{
-				 if(j<(snps->length-1))
-				 {
-					while (getChrPos(target_regions->info[r]->chr)>getChrPos(snps->info[j]->chr)||
-						(getChrPos(target_regions->info[r]->chr)==getChrPos(snps->info[j]->chr)&&
-						(i+target_regions->info[r]->from)>snps->info[j]->pos))
-					{
-						j++;
-						c=1;
-						if(j==(snps->length)-1)
-						{
-							break;
-						}
-					}
-				 } 
-			}
-			if(c==0)
-				i++;
+
+			i++;
 		}
 	}
 	
@@ -1672,8 +1725,24 @@ void *PileUp(void *args)
 		bam_parse_region(tmp->in->header,s,&ref,&(tmp->beg),&(tmp->end));
 		
 		if (ref < 0) {
-		    fprintf(stderr, "Invalid region %s\n", s);
-		    return 1;
+		    fprintf(stderr, "Genomic region %s not compatible with BAM file.\n", s);
+		    exit(1);
+		}
+
+		foo->target_regions->info[r]->sequence = fai_fetch(fasta,s,&len);
+		if (foo->target_regions->info[r]->sequence!=NULL)
+		{
+			length = strlen(foo->target_regions->info[r]->sequence);
+			count = 0;
+  			while(count<length)
+  			{
+    			foo->target_regions->info[r]->sequence[count] = toupper(foo->target_regions->info[r]->sequence[count]);
+    			count++;
+  			}
+		} else
+		{
+			fprintf(stderr, "Genomic region %s not compatible with FASTA file.\n",s);
+		    exit(1);
 		}
 
 		tmp->positions = (struct pos_pileup*)malloc(sizeof(struct pos_pileup)*(tmp->end-tmp->beg));
@@ -1681,7 +1750,6 @@ void *PileUp(void *args)
 		{
 			tmp->positions[i].A = tmp->positions[i].C = tmp->positions[i].G = tmp->positions[i].T = 0;
 			tmp->positions[i].Asb = tmp->positions[i].Csb = tmp->positions[i].Gsb = tmp->positions[i].Tsb = 0;
-			tmp->positions[i].A_dup = tmp->positions[i].C_dup = tmp->positions[i].G_dup = tmp->positions[i].T_dup = NULL;
 		}
 		tmp->duptable = foo->duptable;
 		tmp->arguments = foo->arguments;
@@ -1693,19 +1761,10 @@ void *PileUp(void *args)
 
 		foo->target_regions->info[r]->rdata = tmp;
 
-		foo->target_regions->info[r]->sequence = fai_fetch(fasta,s,&len);
-		length = strlen(foo->target_regions->info[r]->sequence);
-		count = 0;
-      		while(count<length)
-      		{
-	    		foo->target_regions->info[r]->sequence[count] = toupper(foo->target_regions->info[r]->sequence[count]);
-	    		count++;
-      		} 
-
 		if(foo->arguments->mode==0||foo->arguments->mode==1||foo->arguments->mode==3)
 		{	
 			computeRC(foo->arguments->region_perc,foo->target_regions->info[r]);
-	      		computeGCRegion(foo->arguments->region_perc,foo->target_regions->info[r]);
+	      	computeGCRegion(foo->arguments->region_perc,foo->target_regions->info[r]);
 		}
 
 		if(foo->arguments->mode==3)
@@ -1714,8 +1773,6 @@ void *PileUp(void *args)
 			free(tmp->positions);
 			free(tmp);
 		}
-		
-		//fprintf(stderr, "%s\t%d\t%d\n",foo->target_regions->info[r]->chr,foo->target_regions->info[r]->from,foo->target_regions->info[r]->to);
 
 	}
 
@@ -1731,62 +1788,104 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.3.0\n");
+	fprintf(stderr, "PaCBAM version 1.4.2\n");
 	
 	if (argc == 1)
-        {
-            printHelp();
-            return 1;
-        }
+	{
+		printHelp();
+		return 1;
+	}
 	
 	char *tmp_string = NULL;
 	char stmp[10000];
 	struct lookup_dup* duptable = NULL;
+	int i,j,k;
 	
 	printMessage("Load input parameters");
 	struct input_args *arguments;
-        arguments = getInputArgs(argv,argc);
-        if(checkInputArgs(arguments)==1)
-            return 1;
-        
-        printArguments(arguments);
-        
-        #ifdef _WIN32
-        int result_code = mkdir(arguments->outdir);
-        #else
-        mode_t process_mask = umask(0);
-        int result_code = mkdir(arguments->outdir, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH);
-        umask(process_mask);
-        #endif
+    arguments = getInputArgs(argv,argc);
+    if(checkInputArgs(arguments)==1)
+        return 1;
+    
+    printArguments(arguments);
+    
+    #ifdef _WIN32
+    int result_code = mkdir(arguments->outdir);
+    #else
+    mode_t process_mask = umask(0);
+    int result_code = mkdir(arguments->outdir, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH);
+    umask(process_mask);
+    #endif
 
+	// Check correctness of BAM file
 	samfile_t *in = samopen(arguments->bam, "rb", 0);
 	if (in == 0) 
 	{
-		fprintf(stderr, "Fail to open BAM file %s\n", arguments->bam);
+		fprintf(stderr, "ERROR: Fail to open BAM file %s\n", arguments->bam);
 		return 1;
 	}
 	samclose(in);
 
-
+	// Check BAM index
 	bam_index_t *idx = bam_index_load(arguments->bam); // load BAM index
 	if (idx == 0) {
-	    fprintf(stderr, "BAM indexing file is not available\n");
+	    fprintf(stderr, "ERROR: BAM indexing file is not available\n");
 	    return 1;
 	}
 	bam_index_destroy(idx);
-	
+
+	// Check fasta file
+	faidx_t *fasta = fai_load(arguments->fasta);
+	if (fasta == 0)
+	    return 1;
+	fai_destroy(fasta);
+
+	// Init chr arrays
+	BED_CHR = (char *)malloc(sizeof(char *)*MAX_CHR);
+	VCF_CHR = (char *)malloc(sizeof(char *)*MAX_CHR);
+	ORD_CHR = (char *)malloc(sizeof(char *)*MAX_CHR*2);
+	for(i=0;i<MAX_CHR;i++)
+		BED_CHR[i]=VCF_CHR[i]=NULL;
+	for(i=0;i<MAX_CHR*2;i++)
+		ORD_CHR[i]=NULL;
+
 	printMessage("Load target regions");
 	struct target_info* target_regions = loadTargetBed(arguments->bed);
 	sprintf(stmp,"%d target regions loaded",target_regions->length);
 	printMessage(stmp);
 	struct snps_info* snps = NULL;
-        if(arguments->mode==0||arguments->mode==1||arguments->mode==2||arguments->mode==4)
+	printCHR(BED_CHR);
+	if(arguments->mode==0||arguments->mode==1||arguments->mode==2||arguments->mode==5)
 	{
 		printMessage("Load SNPs");
 		snps = loadSNPs(arguments->vcf);
 		sprintf(stmp,"%d snps loaded",snps->length);
 		printMessage(stmp);
+		printCHR(VCF_CHR);
+		// Check BED vs VCF chr ordering
+		i=k=0;
+		while(VCF_CHR[i]!=NULL)
+		{
+			j=0;
+			while(BED_CHR[j]!=NULL)
+			{
+				if(strcmp(VCF_CHR[i],BED_CHR[j])==0)
+				{
+					if (j<k)
+					{
+						fprintf(stderr,"ERROR: BED and VCF chromosomes have not the same order.\n");
+						return(1);
+					}
+					k=j;
+					break;					
+				}
+				j++;
+			}
+			i++;
+		}
+		//mergeBEDVCFCHRLists(VCF_CHR,BED_CHR,ORD_CHR);
 	}
+	
 	if (arguments->duptablename!=NULL)
 	{
 		printMessage("Load duplicates lookup table");
@@ -1799,7 +1898,7 @@ int main(int argc, char *argv[])
 
 	int regions_per_core = ceil(target_regions->length/arguments->cores)+1;
 
-	int i=0;
+	i=0;
 	while(i<arguments->cores)
 	{
 		args[i].start = i*regions_per_core;
@@ -1823,15 +1922,7 @@ int main(int argc, char *argv[])
 		pthread_join(threads[i],NULL);
 	}
 	
-	// Compute RC
-	//printMessage("Compute read counts and GC content");
-	//for (i=0;i<target_regions->length;i++)
-	//{
-	//	computeRC(arguments->region_perc,target_regions->info[i]);
-	//}
-	
 	// BAM file name
-	
 	FILE *outfile,*outfileSNPs,*outfileSNVs,*outfileALL,*outfileREAD,*outfileDUP;
 	outfile = outfileSNPs = outfileSNVs = outfileALL = outfileREAD = outfileDUP = NULL;
         char *outfile_name = NULL;
@@ -1886,16 +1977,6 @@ int main(int argc, char *argv[])
 			outfileALL = fopen(outfile_name,"w");
 		}
 
-		/*if (arguments->dups_info == 1)
-		{
-			if(outfile_name!=NULL)
-				  free(outfile_name);
-			outfile_name = (char*)malloc(strlen(tmp_string)+5);
-			sprintf(outfile_name,"%s.dup",tmp_string);
-			outfileDUP = fopen(outfile_name,"w");
-		}*/
-
-
 		printTargetRegionSNVsPileup(outfileSNPs,outfileSNVs,outfileALL,outfileDUP,target_regions,snps,arguments,0,target_regions->length);
 		if(outfileSNPs!=NULL)
 			fclose(outfileSNPs);
@@ -1927,6 +2008,6 @@ int main(int argc, char *argv[])
 	}
 
 	printMessage("Computation end.");
-    	return 0;
+    return 0;
 }
  
