@@ -659,7 +659,6 @@ void computeCovBaseDup(int *dup_counts[], struct pos_pileup *elem, int thr_cov)
 			elem->T += thr_cov*dup_counts[3][i];
 		}
 	}
-    //elem->T = coverageDlist(dup_counts[3],thr_cov);
 }
 
 void mergeBEDVCFCHRLists(char **vcf, char **bed, char **merge)
@@ -884,7 +883,7 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 				qual[pl[i].qpos] < tmp->arguments->mbq ||
 				pl[i].b->core.qual < tmp->arguments->mrq || 
 				pl[i].is_del != 0 || 
-				pl[i].indel < 0 || // only deletion 
+				//pl[i].indel < 0 || // only deletion 
 				pl[i].is_refskip != 0 || 
 				(pl[i].b->core.flag & BAM_DEF_MASK))) 
 			{
@@ -1781,7 +1780,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.2\n");
+	fprintf(stderr, "PaCBAM version 1.4.3\n");
 	
 	if (argc == 1)
 	{
