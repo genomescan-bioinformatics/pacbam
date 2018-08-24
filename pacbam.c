@@ -40,7 +40,7 @@ struct input_args
     int mbq;
     int mrq;
     int mdc;
-    int dupmode;
+    //int dupmode;
     int strand_bias;
     float region_perc;
 };
@@ -55,7 +55,7 @@ struct input_args *getInputArgs(char *argv[],int argc)
     arguments->mrq = 1;
     arguments->mdc = 0;
     arguments->mode = 0;
-    arguments->dupmode = 0;
+    //arguments->dupmode = 0;
     arguments->strand_bias = 0;
     arguments->vcf = NULL;
     arguments->bed = NULL;
@@ -1112,7 +1112,7 @@ struct target_info* loadTargetBed(char *file_name)
     
     if(file==NULL)
     {
-        fprintf(stderr,"\nFile %s not present!!!\n",file_name);
+        fprintf(stderr,"\nFile %s not present.\n",file_name);
         exit(1);
     }
 
@@ -1206,7 +1206,7 @@ struct target_info* loadTargetBed(char *file_name)
 	{
 		if(current_elem->from<=prev_to)
 		{
-			fprintf(stderr,"ERROR: genomic regions are not positionally ordered (line %d).\n",line_numb);
+			fprintf(stderr,"ERROR: genomic regions are not positionally ordered or there are overlapping regions (line %d).\n",line_numb);
 			exit(1);
 		}
 
@@ -1216,6 +1216,11 @@ struct target_info* loadTargetBed(char *file_name)
 	if (current_elem->to-(current_elem->from-1)<1)
 	{
 		fprintf(stderr,"ERROR: genomic region at line %d has length <1.\n",line_numb);
+		exit(1);
+	}	
+	if (current_elem->to<0||current_elem->from<0)
+	{
+		fprintf(stderr,"ERROR: genomic coordinates at line %d should be positive.\n",line_numb);
 		exit(1);
 	}	
 
@@ -1259,7 +1264,7 @@ struct snps_info* loadSNPs(char *file_name)
     
     if  (file==NULL)
     {
-        fprintf(stderr,"\nFile %s not present!!!\n",file_name);
+        fprintf(stderr,"\nFile %s not present.\n",file_name);
         exit(1);
     }
 
@@ -1370,7 +1375,7 @@ struct snps_info* loadSNPs(char *file_name)
 
 		if (current_elem->pos<0)
 		{
-			fprintf(stderr,"ERROR: position at line %d is not valid.\n",line_numb);
+			fprintf(stderr,"ERROR: position at line %d should be positive.\n",line_numb);
 			exit(1);
 		}
 		if (strcmp(current_elem->ref,strA)!=0&&strcmp(current_elem->ref,strC)!=0&&strcmp(current_elem->ref,strG)!=0&&strcmp(current_elem->ref,strT)!=0)
@@ -1554,23 +1559,11 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 							target_regions->info[r]->rdata->positions[i].T,
 							af,cov);
 					}
-					//postmp = snps->info[j]->pos;
 					j++;
 					if(j>=snps->length)
 					{
 						j=snps->length-1;
-					} /*else
-					{
-						while(snps->info[j]->pos==postmp)
-						{
-							j++;
-							if(j>=snps->length)
-							{
-								j=snps->length-1;
-								break;
-							}
-						}
-					}*/
+					}
 				} else
 				{
 					ctrl = 1;
@@ -1702,7 +1695,7 @@ void *PileUp(void *args)
 	struct args_thread *foo = (struct args_thread *)args;
 	int i,r,ref,len,length,count;
 	char s[200];
-    	char stmp[200];
+    char stmp[200];
 	struct region_data *tmp;
 	bam_plbuf_t *buf;
 	faidx_t *fasta;
@@ -1725,7 +1718,7 @@ void *PileUp(void *args)
 		bam_parse_region(tmp->in->header,s,&ref,&(tmp->beg),&(tmp->end));
 		
 		if (ref < 0) {
-		    fprintf(stderr, "Genomic region %s not compatible with BAM file.\n", s);
+		    fprintf(stderr, "ERROR: genomic region %s not compatible with BAM file.\n", s);
 		    exit(1);
 		}
 
@@ -1741,7 +1734,7 @@ void *PileUp(void *args)
   			}
 		} else
 		{
-			fprintf(stderr, "Genomic region %s not compatible with FASTA file.\n",s);
+			fprintf(stderr, "ERROR: genomic region %s not compatible with FASTA file.\n",s);
 		    exit(1);
 		}
 
@@ -1821,7 +1814,7 @@ int main(int argc, char *argv[])
 	samfile_t *in = samopen(arguments->bam, "rb", 0);
 	if (in == 0) 
 	{
-		fprintf(stderr, "ERROR: Fail to open BAM file %s\n", arguments->bam);
+		fprintf(stderr, "ERROR: Fail to open BAM file.%s\n", arguments->bam);
 		return 1;
 	}
 	samclose(in);
@@ -1829,7 +1822,7 @@ int main(int argc, char *argv[])
 	// Check BAM index
 	bam_index_t *idx = bam_index_load(arguments->bam); // load BAM index
 	if (idx == 0) {
-	    fprintf(stderr, "ERROR: BAM indexing file is not available\n");
+	    fprintf(stderr, "ERROR: BAM indexing file is not available.\n");
 	    return 1;
 	}
 	bam_index_destroy(idx);
@@ -1873,7 +1866,7 @@ int main(int argc, char *argv[])
 				{
 					if (j<k)
 					{
-						fprintf(stderr,"ERROR: BED and VCF chromosomes have not the same order.\n");
+						fprintf(stderr,"ERROR: chromosomes specified in BED and VCF files have not the same order.\n");
 						return(1);
 					}
 					k=j;
@@ -1883,7 +1876,7 @@ int main(int argc, char *argv[])
 			}
 			i++;
 		}
-		//mergeBEDVCFCHRLists(VCF_CHR,BED_CHR,ORD_CHR);
+		mergeBEDVCFCHRLists(VCF_CHR,BED_CHR,ORD_CHR);
 	}
 	
 	if (arguments->duptablename!=NULL)
