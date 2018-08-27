@@ -42,6 +42,7 @@ struct input_args
     int mdc;
     //int dupmode;
     int strand_bias;
+    int exclude_INDEL;
     float region_perc;
 };
 
@@ -57,6 +58,7 @@ struct input_args *getInputArgs(char *argv[],int argc)
     arguments->mode = 0;
     //arguments->dupmode = 0;
     arguments->strand_bias = 0;
+    arguments->exclude_INDEL = 0;
     arguments->vcf = NULL;
     arguments->bed = NULL;
     arguments->bam = NULL;
@@ -158,6 +160,10 @@ struct input_args *getInputArgs(char *argv[],int argc)
         else if( strncmp(argv[i],"strandbias",10) == 0 )
         {
             arguments->strand_bias = 1;
+        }
+        else if( strncmp(argv[i],"excludeINDEL",12) == 0 )
+        {
+            arguments->exclude_INDEL = 1;
         }
         else
         {
@@ -883,7 +889,7 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 				qual[pl[i].qpos] < tmp->arguments->mbq ||
 				pl[i].b->core.qual < tmp->arguments->mrq || 
 				pl[i].is_del != 0 || 
-				//pl[i].indel < 0 || // only deletion 
+				(tmp->arguments->exclude_INDEL==1 && pl[i].indel != 0) ||  
 				pl[i].is_refskip != 0 || 
 				(pl[i].b->core.flag & BAM_DEF_MASK))) 
 			{
@@ -1780,7 +1786,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.3\n");
+	fprintf(stderr, "PaCBAM version 1.4.4\n");
 	
 	if (argc == 1)
 	{
