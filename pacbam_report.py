@@ -333,7 +333,7 @@ def RCReport(filename,outFile):
 		#region coverage plot		
 		f, (ax1, ax2) = plt.subplots(1,2,sharey=True,sharex=True)
 
-		ax1.set_ylabel("Region at coverage")
+		ax1.set_ylabel("Fraction of regions")
 		ax1.set_xlabel("Coverage")
 		ax2.set_xlabel("Coverage")
 		
