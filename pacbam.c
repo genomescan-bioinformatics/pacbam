@@ -268,7 +268,7 @@ void printArguments(struct input_args *arguments)
 
 void printHelp()
 {
-    fprintf(stderr,"\nUsage: \n ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string] [duptab=string] [regionperc=float] [strandbias]\n\n");
+    fprintf(stderr,"\nUsage: \n ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string] [duptab=string] [regionperc=float] [strandbias] [excludeINDEL]\n\n");
     fprintf(stderr,"bam=string \n NGS data file in BAM format \n");
     fprintf(stderr,"bed=string \n List of target captured regions in BED format \n");
     fprintf(stderr,"vcf=string \n List of SNP positions in VCF format \n");
@@ -280,7 +280,8 @@ void printHelp()
     fprintf(stderr,"mbq=int \n Min base quality\n (default 20)\n");
     fprintf(stderr,"mrq=int \n Min read quality\n (default 1)\n");
     fprintf(stderr,"mdc=int \n Min depth of coverage that a position should have to be considered in the output\n (default 0)\n");
-    fprintf(stderr,"strandbias \n Print strand bias count information\n (default 1)\n");
+    fprintf(stderr,"strandbias \n Print strand bias count information\n");
+    fprintf(stderr,"excludeINDEL \n excludes from pileup reads supporting INDELs at the specific position\n");
     fprintf(stderr,"out=string \n Path of output directory (default is the current directory)\n\n");
 }
 
@@ -618,51 +619,51 @@ void incBaseDup(Dlist *dup[], int *dup_counts[], int val, int pos, int pos_pair,
 }
 
 // Compute coverage of bases by duplicates lists
-void computeCovBaseDup(int *dup_counts[], struct pos_pileup *elem, int thr_cov)
+void computeCovBaseDup(int *dup_counts[], struct pos_pileup *elem, int thr_cov_A, int thr_cov_C, int thr_cov_G, int thr_cov_T)
 {
 	int i;
 	elem->A = 0;
 	for(i=0;i<MAX_DUP;i++)
 	{
-		if(i<=(thr_cov-1))
+		if(i<=(thr_cov_A-1))
 		{
 			elem->A += (i+1)*dup_counts[0][i];
 		} else
 		{
-			elem->A += thr_cov*dup_counts[0][i];
+			elem->A += thr_cov_A*dup_counts[0][i];
 		}
 	}
 	elem->C = 0;
 	for(i=0;i<MAX_DUP;i++)
 	{
-		if(i<=(thr_cov-1))
+		if(i<=(thr_cov_C-1))
 		{
 			elem->C += (i+1)*dup_counts[1][i];
 		} else
 		{
-			elem->C += thr_cov*dup_counts[1][i];
+			elem->C += thr_cov_C*dup_counts[1][i];
 		}
 	}
 	elem->G = 0;
 	for(i=0;i<MAX_DUP;i++)
 	{
-		if(i<=(thr_cov-1))
+		if(i<=(thr_cov_G-1))
 		{
 			elem->G += (i+1)*dup_counts[2][i];
 		} else
 		{
-			elem->G += thr_cov*dup_counts[2][i];
+			elem->G += thr_cov_G*dup_counts[2][i];
 		}
 	}
 	elem->T = 0;
 	for(i=0;i<MAX_DUP;i++)
 	{
-		if(i<=(thr_cov-1))
+		if(i<=(thr_cov_T-1))
 		{
 			elem->T += (i+1)*dup_counts[3][i];
 		} else
 		{
-			elem->T += thr_cov*dup_counts[3][i];
+			elem->T += thr_cov_T*dup_counts[3][i];
 		}
 	}
 }
@@ -864,7 +865,7 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
     int read_init;
     uint32_t *cigar,lcigar;
     uint8_t *md;
-    int thr_cov;
+    int thr_cov_A,thr_cov_C,thr_cov_G,thr_cov_T;
 	Dlist *dup[4];
 	int *dup_counts[4];
     if (tmp->arguments->duptablename != NULL) 
@@ -915,14 +916,15 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 
 		if (tmp->arguments->duptablename != NULL)
 		{
-			// find duplicates threshdold for base coverage
-			thr_cov = getThrDupLookup(tmp->duptable,tmp->positions[pos-tmp->beg].A+
-						  tmp->positions[pos-tmp->beg].C+
-						  tmp->positions[pos-tmp->beg].G+
-						  tmp->positions[pos-tmp->beg].T);
+			// find duplicates threshdold for all bases coverage
+			thr_cov_A = getThrDupLookup(tmp->duptable,tmp->positions[pos-tmp->beg].A);
+			thr_cov_C = getThrDupLookup(tmp->duptable,tmp->positions[pos-tmp->beg].C);
+			thr_cov_G = getThrDupLookup(tmp->duptable,tmp->positions[pos-tmp->beg].G);
+			thr_cov_T = getThrDupLookup(tmp->duptable,tmp->positions[pos-tmp->beg].T);
+			
 			// recompute base coverage after lifting
 			countAndFreeDlist(dup[0],dup_counts[0]);countAndFreeDlist(dup[1],dup_counts[1]);countAndFreeDlist(dup[2],dup_counts[2]);countAndFreeDlist(dup[3],dup_counts[3]);
-			computeCovBaseDup(&dup_counts,&(tmp->positions[pos-tmp->beg]),thr_cov);  
+			computeCovBaseDup(&dup_counts,&(tmp->positions[pos-tmp->beg]),thr_cov_A,thr_cov_C,thr_cov_G,thr_cov_T);  
 			free(dup_counts[0]);free(dup_counts[1]);free(dup_counts[2]);free(dup_counts[3]);
 		}
         
@@ -1786,7 +1788,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.4\n");
+	fprintf(stderr, "PaCBAM version 1.4.5\n");
 	
 	if (argc == 1)
 	{
