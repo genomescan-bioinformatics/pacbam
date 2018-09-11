@@ -702,8 +702,8 @@ void mergeBEDVCFCHRLists(char **vcf, char **bed, char **merge)
 	}
 	while(bed[j]!=NULL)
 	{
-		merge[k] = (char *)malloc(sizeof(char)*strlen(bed[n])+1);
-		strcpy(merge[k],bed[n]);
+		merge[k] = (char *)malloc(sizeof(char)*strlen(bed[j])+1);
+		strcpy(merge[k],bed[j]);
 		subSlash(merge[k]);
 		k++;
 		j++;
@@ -1788,7 +1788,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.5\n");
+	fprintf(stderr, "PaCBAM version 1.4.6\n");
 	
 	if (argc == 1)
 	{
@@ -1885,7 +1885,7 @@ int main(int argc, char *argv[])
 		}
 		mergeBEDVCFCHRLists(VCF_CHR,BED_CHR,ORD_CHR);
 	}
-	
+
 	if (arguments->duptablename!=NULL)
 	{
 		printMessage("Load duplicates lookup table");
