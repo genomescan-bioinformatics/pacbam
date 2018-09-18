@@ -379,7 +379,7 @@ if __name__ == '__main__':
 	#input files
 	pileupFile = args.input + ".pileup" 
 	snpsFile = args.input + ".snps"
-	snvsFile = args.input + ".snvs"
+	snvsFile = args.input + ".pabs"
 	RCFile = args.input + ".rc"
 
 	#mode
