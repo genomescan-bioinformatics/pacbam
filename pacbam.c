@@ -6,6 +6,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include "samtools/sam.h"
 #include "samtools/faidx.h"
 
@@ -42,7 +43,6 @@ struct input_args
     int mdc;
     //int dupmode;
     int strand_bias;
-    int exclude_INDEL;
     float region_perc;
 };
 
@@ -58,7 +58,6 @@ struct input_args *getInputArgs(char *argv[],int argc)
     arguments->mode = 0;
     //arguments->dupmode = 0;
     arguments->strand_bias = 0;
-    arguments->exclude_INDEL = 0;
     arguments->vcf = NULL;
     arguments->bed = NULL;
     arguments->bam = NULL;
@@ -161,10 +160,6 @@ struct input_args *getInputArgs(char *argv[],int argc)
         {
             arguments->strand_bias = 1;
         }
-        else if( strncmp(argv[i],"excludeINDEL",12) == 0 )
-        {
-            arguments->exclude_INDEL = 1;
-        }
         else
         {
             fprintf(stderr,"ERROR: input parameters not valid.\n");
@@ -195,21 +190,24 @@ int checkInputArgs(struct input_args *arguments)
 		fprintf(stderr,"ERROR: the number of threads is not valid.\n");
 		control=1;
 	}
-	if (control=checkFileExistance(arguments->bed))
+	if (checkFileExistance(arguments->bed)>0)
 	{
 		fprintf(stderr,"ERROR: File BED does not exist or is not specified.\n");
+		control=1;
 	}
-	if (control=checkFileExistance(arguments->bam))
+	if (checkFileExistance(arguments->bam)>0)
 	{
 		fprintf(stderr,"ERROR: File BAM does not exist or is not specified.\n");
+		control=1;
 	}
 	if (vcf_control=checkFileExistance(arguments->vcf)==2)
 	{
 		fprintf(stderr,"ERROR: File VCF does not exist.\n");
 	}
-	if (control=checkFileExistance(arguments->fasta))
+	if (checkFileExistance(arguments->fasta)>0)
 	{
 		fprintf(stderr,"ERROR: File FASTA does not exist or is not specified.\n");
+		control=1;
 	}
 	if (checkFileExistance(arguments->duptablename)==2)
 	{
@@ -268,7 +266,7 @@ void printArguments(struct input_args *arguments)
 
 void printHelp()
 {
-    fprintf(stderr,"\nUsage: \n ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string] [duptab=string] [regionperc=float] [strandbias] [excludeINDEL]\n\n");
+    fprintf(stderr,"\nUsage: \n ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string] [duptab=string] [regionperc=float] [strandbias]\n\n");
     fprintf(stderr,"bam=string \n NGS data file in BAM format \n");
     fprintf(stderr,"bed=string \n List of target captured regions in BED format \n");
     fprintf(stderr,"vcf=string \n List of SNP positions in VCF format \n");
@@ -281,7 +279,6 @@ void printHelp()
     fprintf(stderr,"mrq=int \n Min read quality\n (default 1)\n");
     fprintf(stderr,"mdc=int \n Min depth of coverage that a position should have to be considered in the output\n (default 0)\n");
     fprintf(stderr,"strandbias \n Print strand bias count information\n");
-    fprintf(stderr,"excludeINDEL \n excludes from pileup reads supporting INDELs at the specific position\n");
     fprintf(stderr,"out=string \n Path of output directory (default is the current directory)\n\n");
 }
 
@@ -508,8 +505,8 @@ struct pos_pileup
 // Data for a single region
 struct region_data
 {
-    int beg;
-    int end;
+    uint32_t beg;
+    uint32_t end;
     struct pos_pileup *positions;
     samfile_t *in;
     struct lookup_dup *duptable;
@@ -721,12 +718,12 @@ void printCHR(char **elems)
 	int i=0;
 	while(elems[i]!=NULL)
 	{
-		printf("%s",elems[i]);
+		fprintf(stderr,"%s",elems[i]);
 		if(elems[i+1]!=NULL)
-			printf(",");
+			fprintf(stderr,",");
 		i++;
 	}
-	printf("\n");
+	fprintf(stderr,"\n");
 }
 
 int getChrPos(char *chr)
@@ -890,7 +887,7 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 				qual[pl[i].qpos] < tmp->arguments->mbq ||
 				pl[i].b->core.qual < tmp->arguments->mrq || 
 				pl[i].is_del != 0 || 
-				(tmp->arguments->exclude_INDEL==1 && pl[i].indel != 0) ||  
+				//pl[i].indel != 0) 
 				pl[i].is_refskip != 0 || 
 				(pl[i].b->core.flag & BAM_DEF_MASK))) 
 			{
@@ -1115,7 +1112,8 @@ struct target_info* loadTargetBed(char *file_name)
 {
     FILE *file = fopen(file_name,"r");
     char *seq,*tmp_seq,s[200],stmp[200],prev_chr[20];
-    int i,len,prev_to,idx_chr;
+    int i,len,idx_chr;
+    uint32_t prev_to = 0;
     
     if(file==NULL)
     {
@@ -1187,8 +1185,24 @@ struct target_info* loadTargetBed(char *file_name)
         int size;
         current_elem->chr = (char*)malloc(strlen(str_tokens[0])+1);
         strcpy(current_elem->chr,str_tokens[0]);
-        current_elem->from = atoi(str_tokens[1])+1;
-        current_elem->to = atoi(str_tokens[2]);
+        current_elem->from = strtol(str_tokens[1],&pch,10);
+        current_elem->to = strtol(str_tokens[2],&pch,10);
+        
+        // check correct conversion
+        sprintf(stmp,"%u",current_elem->from);
+        if(strncmp(stmp,str_tokens[1],strlen(stmp))!=0)
+        {
+        	fprintf(stderr,"ERROR: genomic coordinates at line %d are not valid.\n",line_numb);
+			exit(1);
+        }
+		current_elem->from++;
+		 
+        sprintf(stmp,"%u",current_elem->to);
+        if(strncmp(stmp,str_tokens[2],strlen(stmp))!=0)
+        {
+        	fprintf(stderr,"ERROR: genomic coordinates at line %d are not valid.\n",line_numb);
+			exit(1);
+        }
 
 	// check ordering 
 	if(strcmp(current_elem->chr,prev_chr)!=0)
@@ -1220,16 +1234,17 @@ struct target_info* loadTargetBed(char *file_name)
 		prev_to = current_elem->to;
 	}
 
-	if (current_elem->to-(current_elem->from-1)<1)
+	if (current_elem->from>current_elem->to)
+	{
+		fprintf(stderr,"ERROR: genomic region at line %d has inverted coordinates.\n",line_numb);
+		exit(1);
+	}
+	if (current_elem->to-current_elem->from<1)
 	{
 		fprintf(stderr,"ERROR: genomic region at line %d has length <1.\n",line_numb);
 		exit(1);
 	}	
-	if (current_elem->to<0||current_elem->from<0)
-	{
-		fprintf(stderr,"ERROR: genomic coordinates at line %d should be positive.\n",line_numb);
-		exit(1);
-	}	
+
 
         if (str_tokens[3][strlen(str_tokens[3])-1]=='\n')
             size = strlen(str_tokens[3])-1;
@@ -1342,7 +1357,15 @@ struct snps_info* loadSNPs(char *file_name)
         int size;
         current_elem->chr = (char*)malloc(strlen(str_tokens[0])+1);
         strcpy(current_elem->chr,str_tokens[0]);
-        current_elem->pos = atoi(str_tokens[1]);
+        current_elem->pos = strtol(str_tokens[1],&pch,10);
+        // check correct conversion
+        sprintf(stmp,"%u", current_elem->pos);
+        if(strncmp(stmp,str_tokens[1],strlen(stmp))!=0)
+        {
+        	fprintf(stderr,"ERROR: genomic position at line %d is not valid.\n",line_numb);
+			exit(1);
+        }
+        
         current_elem->rsid = (char*)malloc(strlen(str_tokens[2])+1);
         strcpy(current_elem->rsid,str_tokens[2]);
 	   	current_elem->ref = (char*)malloc(strlen(str_tokens[3])+1);
@@ -1471,7 +1494,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 				if(covG>0)
 					afG=((float)altG)/((float)covG);
 					
-				fprintf(outfileALL,"%s\t%d\t%c\t%d\t%d\t%d\t%d\t%.6f\t%d\t",
+				fprintf(outfileALL,"%s\t%u\t%c\t%d\t%d\t%d\t%d\t%.6f\t%d\t",
 						target_regions->info[r]->chr,
 						target_regions->info[r]->from+i,
 						target_regions->info[r]->sequence[i],
@@ -1494,7 +1517,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 					if (cov>=arguments->mdc)
 					{	
 						printID=1;	
-						fprintf(outfileSNVs,"%s\t%d\t%c\t%s\t%d\t%d\t%d\t%d\t%.6f\t%d\t",
+						fprintf(outfileSNVs,"%s\t%u\t%c\t%s\t%d\t%d\t%d\t%d\t%.6f\t%d\t",
 							target_regions->info[r]->chr,
 							target_regions->info[r]->from+i,
 							target_regions->info[r]->sequence[i],
@@ -1554,7 +1577,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 	
 					if (cov>=arguments->mdc&&(arguments->mode==0||arguments->mode==1||arguments->mode==2))
 					{
-						fprintf(outfileSNPs,"%s\t%d\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%d\n",
+						fprintf(outfileSNPs,"%s\t%u\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%d\n",
 							target_regions->info[r]->chr,
 							target_regions->info[r]->from+i,
 							snps->info[j]->rsid,
@@ -1599,7 +1622,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 					if(covG>0)
 						afG=((float)altG)/((float)covG);
 							
-					buffer_count += sprintf(&file_buffer[buffer_count],"%s\t%d\t%c\t%d\t%d\t%d\t%d\t%.6f\t%d\n",
+					buffer_count += sprintf(&file_buffer[buffer_count],"%s\t%u\t%c\t%d\t%d\t%d\t%d\t%.6f\t%d\n",
 							target_regions->info[r]->chr,
 							target_regions->info[r]->from+i,
 							target_regions->info[r]->sequence[i],
@@ -1631,7 +1654,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 							
 						if (cov>=arguments->mdc)
 						{		
-							fprintf(outfileSNVs,"%s\t%d\t%c\t%s\t%d\t%d\t%d\t%d\t%.6f\t%d",
+							fprintf(outfileSNVs,"%s\t%u\t%c\t%s\t%d\t%d\t%d\t%d\t%.6f\t%d",
 								target_regions->info[r]->chr,
 								target_regions->info[r]->from+i,
 								target_regions->info[r]->sequence[i],
@@ -1670,7 +1693,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 
 void printTargetRegionRC(FILE *outfile,struct target_t *elem)
 {
-	fprintf(outfile,"%s\t%d\t%d\t%d\t%d\t%.2f\t%.2f\t%.2f\n",elem->chr,elem->from,elem->to,elem->from_sel,elem->to_sel,elem->read_count_global,elem->read_count,elem->gc);
+	fprintf(outfile,"%s\t%u\t%u\t%d\t%d\t%.2f\t%.2f\t%.2f\n",elem->chr,elem->from,elem->to,elem->from_sel,elem->to_sel,elem->read_count_global,elem->read_count,elem->gc);
 }
 
 void printDUPLookupTable(struct lookup_dup *table)
@@ -1719,12 +1742,12 @@ void *PileUp(void *args)
 		tmp->in = in;
 		s[0] = '\0';
 		sprintf(stmp,"%s",foo->target_regions->info[r]->chr);strcat(s,stmp);strcat(s,":");
-		sprintf(stmp,"%d",foo->target_regions->info[r]->from);strcat(s,stmp);strcat(s,"-");
-		sprintf(stmp,"%d",foo->target_regions->info[r]->to);strcat(s,stmp);
+		sprintf(stmp,"%u",foo->target_regions->info[r]->from);strcat(s,stmp);strcat(s,"-");
+		sprintf(stmp,"%u",foo->target_regions->info[r]->to);strcat(s,stmp);
 
 		bam_parse_region(tmp->in->header,s,&ref,&(tmp->beg),&(tmp->end));
 		
-		if (ref < 0) {
+		if (ref<0 || tmp->end<0 || tmp->beg<0) {
 		    fprintf(stderr, "ERROR: genomic region %s not compatible with BAM file.\n", s);
 		    exit(1);
 		}
@@ -1788,7 +1811,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.6\n");
+	fprintf(stderr, "PaCBAM version 1.4.8\n");
 	
 	if (argc == 1)
 	{
@@ -1948,7 +1971,7 @@ int main(int argc, char *argv[])
 	if(arguments->mode==0||arguments->mode==1||arguments->mode==2||arguments->mode==4||arguments->mode==5)
 	{
 		// Print target regions positions
-		sprintf(stmp,"Output single base pileup files in folder %s",arguments->outdir);
+		sprintf(stmp,"Output single base pileup statistcs files in folder %s",arguments->outdir);
 		printMessage(stmp);
 		
 		if (arguments->mode == 0||arguments->mode == 1||arguments->mode == 2)
@@ -1965,7 +1988,7 @@ int main(int argc, char *argv[])
 			if(outfile_name!=NULL)
 				  free(outfile_name);
 			outfile_name = (char*)malloc(strlen(tmp_string)+6);
-			sprintf(outfile_name,"%s.snvs",tmp_string);
+			sprintf(outfile_name,"%s.pabs",tmp_string);
 			outfileSNVs = fopen(outfile_name,"w");
 		}
 		if (arguments->mode == 1||arguments->mode == 4||arguments->mode == 5)
@@ -1996,7 +2019,7 @@ int main(int argc, char *argv[])
 		outfile_name = (char*)malloc(strlen(tmp_string)+4);
 		sprintf(outfile_name,"%s.rc",tmp_string);
 
-		sprintf(stmp,"Output read count file in folder %s.",arguments->outdir);
+		sprintf(stmp,"Output reagions statistics file in folder %s.",arguments->outdir);
 		printMessage(stmp);
 		outfile = fopen(outfile_name,"w");
 		fprintf(outfile,"chr\tfrom\tto\tfromS\ttoS\trc\trcS\tgc\n");
