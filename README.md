@@ -65,8 +65,6 @@ mdc=int
  (default 0)
 strandbias 
  Print strand bias count information
-excludeINDEL 
- excludes from pileup reads supporting INDELs at the specific position
 out=string 
  Path of output directory (default is the current directory)
 ```
