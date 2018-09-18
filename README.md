@@ -136,7 +136,7 @@ chr	pos	ref	A	C	G	T	af	cov
 ...
 ```
 
-#### Single-nucleotide variants (SNVs) pileup
+#### Positions with reads support for alternative base
 Provides pileup information only for position with positive VAF, computed using the alternative base with highest read depth (if any).
 
 ```
@@ -194,7 +194,7 @@ It provides different graphs for every output file:
 
 	rc: gc content and region coverage distributions  
 	snps: total SNPs count, total distribution and quantile distributions of alternative heterozygous and alternative homozygous SNPs 
-	snvs: base modification count and strand bias distribution  
+	pabs: base modification count and strand bias distribution  
 	pileup: cumulative coverage and allelic fraction distributions  
 
 #### Requirements
@@ -220,8 +220,8 @@ Usage:
 ```
 
 Mode option:  
-	0 Files: .rc, .snps and .snvs  
-	1 Files: .rc, .snps, .snvs and .pileup  
+	0 Files: .rc, .snps and .pabs 
+	1 Files: .rc, .snps, .pabs and .pileup  
 	2 Files: .snps  
 	3 Files: .rc  
 	4 Files: .pileup  
@@ -246,7 +246,7 @@ The report script produces a single pdf file with all the graphs of the choosen 
 *Example of PaCBAM reporting on allelic fraction (AF) distribution of all positions contained in the PaCBAM SNPs output file. SNPs are classified as heterozygous or alternative homozygous based on standard AF thresholds. Classification is also reported stratified by coverage quartiles.*
 
 ![baseModification](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/baseModification.png)  
-*Example of PaCBAM reporting on distribution of alternative bases found for each reference base across all positions reported in the SNVs PaCBAM output file (i.e. all positions with non-zero variant allelic fraction).*
+*Example of PaCBAM reporting on distribution of alternative bases found for each reference base across all positions reported in the PABS PaCBAM output file (i.e. all positions with non-zero variant allelic fraction).*
 
 ![regionCoverage](https://bitbucket.org/CibioBCG/pacbam/raw/master/reports/regionCoverage.png)  
 *Example of PaCBAM reporting on mean depth of coverage distribution computed across all regions reported in the genomic regions of the PaCBAM output file. Distribution is reported both for regions overall mean coverage and for regions fractions maximizing mean coverage.*
