@@ -40,7 +40,7 @@ bam=string
 bed=string 
  List of target captured regions in BED format 
 vcf=string 
- List of SNP positions in VCF format 
+ List of SNP positions in VCF format (no compressed files are admitted)
 fasta=string 
  Reference genome FASTA format file 
 mode=string 
