@@ -55,7 +55,7 @@ struct input_args *getInputArgs(char *argv[],int argc)
     arguments->mbq = 20;
     arguments->mrq = 1;
     arguments->mdc = 0;
-    arguments->mode = 0;
+    arguments->mode = 4;
     //arguments->dupmode = 0;
     arguments->strand_bias = 0;
     arguments->vcf = NULL;
@@ -184,6 +184,8 @@ int checkInputArgs(struct input_args *arguments)
 {
 	int control = 0;
 	int vcf_control = 0;
+	const char ch = '.';
+    char *ret;
     
 	if (arguments->cores<=0)
 	{
@@ -195,6 +197,12 @@ int checkInputArgs(struct input_args *arguments)
 		fprintf(stderr,"ERROR: File BED does not exist or is not specified.\n");
 		control=1;
 	}
+	ret = strrchr(arguments->bed,ch);
+	if (strncmp(ret,".bed",4)!=0)
+	{
+		fprintf(stderr,"ERROR: A file BED should be specified.\n");
+		control=1;
+	}
 	if (checkFileExistance(arguments->bam)>0)
 	{
 		fprintf(stderr,"ERROR: File BAM does not exist or is not specified.\n");
@@ -203,6 +211,12 @@ int checkInputArgs(struct input_args *arguments)
 	if (vcf_control=checkFileExistance(arguments->vcf)==2)
 	{
 		fprintf(stderr,"ERROR: File VCF does not exist.\n");
+	}
+	ret = strrchr(arguments->vcf,ch);
+	if (strncmp(ret,".vcf",4)!=0)
+	{
+		fprintf(stderr,"ERROR: A file VCF should be specified.\n");
+		vcf_control==1;
 	}
 	if (checkFileExistance(arguments->fasta)>0)
 	{
@@ -267,11 +281,11 @@ void printArguments(struct input_args *arguments)
 void printHelp()
 {
     fprintf(stderr,"\nUsage: \n ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string] [duptab=string] [regionperc=float] [strandbias]\n\n");
-    fprintf(stderr,"bam=string \n NGS data file in BAM format \n");
-    fprintf(stderr,"bed=string \n List of target captured regions in BED format \n");
-    fprintf(stderr,"vcf=string \n List of SNP positions in VCF format \n");
+    fprintf(stderr,"bam=string \n NGS data file in BAM format\n");
+    fprintf(stderr,"bed=string \n List of target captured regions in BED format\n");
+    fprintf(stderr,"vcf=string \n List of SNP positions in VCF format (no compressed files are admitted)\n");
     fprintf(stderr,"fasta=string \n Reference genome FASTA format file \n");
-    fprintf(stderr,"mode=string \n Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]\n (default 0)\n");  
+    fprintf(stderr,"mode=string \n Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]\n (default 4)\n");  
     fprintf(stderr,"duptab=string \n On-the-fly duplicates filtering lookup table\n");  
     fprintf(stderr,"threads=int \n Number of threads used (if available) for the pileup computation\n (default 1)\n");
     fprintf(stderr,"regionperc=float \n Fraction of the captured region to consider for maximum peak signal characterization\n (default 0.5)\n");
