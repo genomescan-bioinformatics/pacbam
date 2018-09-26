@@ -1149,6 +1149,12 @@ struct target_info* loadTargetBed(char *file_name)
 
     rewind(file);
 
+	if(number_of_lines==0)
+    {
+    	fprintf(stderr,"ERROR: BED file is empty.\n");
+		exit(1);
+    }
+
     // create the overall structure
     struct target_info *target = (struct target_info *)malloc(sizeof(struct target_info));
     target->info = malloc(sizeof(struct target_t *)*number_of_lines);
@@ -1317,6 +1323,12 @@ struct snps_info* loadSNPs(char *file_name)
     }
 
     rewind(file);
+    
+    if(number_of_lines==0)
+    {
+    	fprintf(stderr,"ERROR: VCF file is empty.\n");
+		exit(1);
+    }
 
     // create the overall structure
     struct snps_info *snps = (struct snps_info *)malloc(sizeof(struct snps_info));
@@ -1825,7 +1837,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.8\n");
+	fprintf(stderr, "PaCBAM version 1.4.9\n");
 	
 	if (argc == 1)
 	{
