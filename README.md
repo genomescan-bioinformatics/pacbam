@@ -45,7 +45,7 @@ fasta=string
  Reference genome FASTA format file 
 mode=string 
  Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]
- (default 0)
+ (default 4)
 duptab=string 
  On-the-fly duplicates filtering lookup table
 threads=int 
