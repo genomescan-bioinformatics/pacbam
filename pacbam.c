@@ -1779,7 +1779,7 @@ void *PileUp(void *args)
 		}
 
 		foo->target_regions->info[r]->sequence = fai_fetch(fasta,s,&len);
-		if (foo->target_regions->info[r]->sequence!=NULL)
+		if (foo->target_regions->info[r]->sequence!=NULL&&len>0)
 		{
 			length = strlen(foo->target_regions->info[r]->sequence);
 			count = 0;
@@ -1837,7 +1837,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.9\n");
+	fprintf(stderr, "PaCBAM version 1.4.10\n");
 	
 	if (argc == 1)
 	{
