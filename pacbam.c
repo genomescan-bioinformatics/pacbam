@@ -1259,7 +1259,7 @@ struct target_info* loadTargetBed(char *file_name)
 		fprintf(stderr,"ERROR: genomic region at line %d has inverted coordinates.\n",line_numb);
 		exit(1);
 	}
-	if (current_elem->to-current_elem->from<1)
+	if (current_elem->to-current_elem->from<0)
 	{
 		fprintf(stderr,"ERROR: genomic region at line %d has length <1.\n",line_numb);
 		exit(1);
@@ -1837,7 +1837,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.10\n");
+	fprintf(stderr, "PaCBAM version 1.4.11\n");
 	
 	if (argc == 1)
 	{
