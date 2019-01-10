@@ -10,6 +10,26 @@
 #include "samtools/sam.h"
 #include "samtools/faidx.h"
 
+/////////////////////////////
+///CIGAR related macros
+/////////////////////////////
+
+#define BAM_CMATCH      0
+#define BAM_CINS        1
+#define BAM_CDEL        2
+#define BAM_CREF_SKIP   3
+#define BAM_CSOFT_CLIP  4
+#define BAM_CHARD_CLIP  5
+#define BAM_CPAD        6
+#define BAM_CEQUAL      7
+#define BAM_CDIFF       8
+#define BAM_CBACK       9
+#define BAM_CIGAR_SHIFT 4
+#define BAM_CIGAR_MASK  0xf
+
+#define bam_cigar_op(c) ((c)&BAM_CIGAR_MASK)
+#define bam_cigar_oplen(c) ((c)>>BAM_CIGAR_SHIFT)
+
 #ifdef _WIN32
 #include <windows.h>
 #define sleep(x) Sleep(1000 * x)
@@ -18,6 +38,7 @@
 int MAX_READ_BUFF=1000000;
 int MAX_DUP=1;
 int MAX_CHR=100;
+int MAX_CSOFT_CLIP=101;
 char **BED_CHR;
 char **VCF_CHR;
 char **ORD_CHR;
@@ -307,60 +328,17 @@ struct Dnode
   int pos_pair;
   int chr_pair;
   int number;
-  //uint32_t *cigar;
-  //uint32_t lcigar;
-  //uint8_t md;
   int strand;
   struct Dlist *next;
 };
 
 typedef struct Dnode Dlist;
 
-/*Dlist *addDlistCIGAR(Dlist *list, int npos, int npos_pair, int nchr_pair, uint32_t *ncigar, uint32_t nlcigar, int nstrand, uint8_t nmd)
-{
-  Dlist *tmp = list;
-  int check_cigar;
-  while (list!=NULL)
-  {
-  	check_cigar = 0;
-  	if(list->lcigar==nlcigar)
-  	{
-	  	for(int i=0;i<nlcigar;i++)
-	  	{
-	  		if(list->cigar[i]!=ncigar[i])
-	  		{
-	  			check_cigar=1;
-	  			break;
-	  		}
-	  	}
-  	}
-  	
-  	if(list->pos==npos && list->pos_pair==npos_pair && list->chr_pair==nchr_pair && check_cigar==0 && list->strand==nstrand && list->md==nmd)
-  	{
-  		list->number++;
-  		return(tmp);
-  	}
-  	
-  	list = list->next;
-  }
-  Dlist *link = (struct Dnode*)malloc(sizeof(struct Dnode));
-  link->pos = npos;
-  link->pos_pair = npos_pair;
-  link->chr_pair = nchr_pair;
-  link->number = 1;
-  link->cigar = ncigar;
-  link->lcigar = nlcigar;
-  link->strand = nstrand;
-  link->md = nmd;
-  link->next = tmp;
-  return (link);
-}*/
-
 Dlist *addDlist(Dlist *list, int *list_counts, int npos, int npos_pair, int nchr_pair, int nstrand)
 {
 	Dlist *tmp = list;
 	// Assumes reads in the pileup area ordered by position
-	if(list!=NULL && npos>list->pos)
+	if(list!=NULL && npos>(list->pos+MAX_CSOFT_CLIP))
 	{
 		countAndFreeDlist(tmp,list_counts);
 		list = NULL;
@@ -381,10 +359,7 @@ Dlist *addDlist(Dlist *list, int *list_counts, int npos, int npos_pair, int nchr
 	link->pos_pair = npos_pair;
 	link->chr_pair = nchr_pair;
 	link->number = 1;
-	//link->cigar = NULL;
-	//link->lcigar = 0;
 	link->strand = nstrand;
-	//link->md = 0;
 	link->next = tmp;
 	return(link);
 }
@@ -602,19 +577,6 @@ void incBaseStrand(struct pos_pileup *elem, int val, int strand)
         elem->Tsb++;
 }
 
-
-// Increments the number of duplicated reads per base considering also CIGAR
-/*void incBaseDupCIGAR(Dlist *dup[], int val, int pos, int pos_pair, int chr_pair, uint32_t *cigar, uint32_t lcigar, uint8_t md, int strand)
-{
-    if (val==1)
-        dup[0] = addDlistCIGAR(dup[0],pos,pos_pair,chr_pair,cigar,lcigar,md,strand);
-    else if (val==2)
-        dup[1] = addDlistCIGAR(dup[1],pos,pos_pair,chr_pair,cigar,lcigar,md,strand);
-    else if (val==4)
-        dup[2] = addDlistCIGAR(dup[2],pos,pos_pair,chr_pair,cigar,lcigar,md,strand);
-    else if (val==8)
-        dup[3] = addDlistCIGAR(dup[3],pos,pos_pair,chr_pair,cigar,lcigar,md,strand);
-}*/
 
 // Increments the number of duplicated reads per base
 void incBaseDup(Dlist *dup[], int *dup_counts[], int val, int pos, int pos_pair, int chr_pair, int strand)
@@ -876,7 +838,7 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
     int read_init;
     uint32_t *cigar,lcigar;
     uint8_t *md;
-    int thr_cov_A,thr_cov_C,thr_cov_G,thr_cov_T;
+    int thr_cov_A,thr_cov_C,thr_cov_G,thr_cov_T,op,ol,pos_c;
 	Dlist *dup[4];
 	int *dup_counts[4];
     if (tmp->arguments->duptablename != NULL) 
@@ -910,16 +872,13 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 					incBaseStrand(&(tmp->positions[pos-tmp->beg]),bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),bam1_strand(pl[i].b));
 				if (tmp->arguments->duptablename != NULL) 
 				{
-					/*if(tmp->arguments->dupmode==1)
-					{
-						md = bam_aux_get(pl[i].b,"MD");
-						cigar = bam1_cigar(pl[i].b);
-						lcigar = pl[i].b->core.n_cigar;
-						incBaseDupCIGAR(&dup,bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),(pl[i].b->core.pos)+1,(pl[i].b->core.mpos)+1,pl[i].b->core.mtid,cigar,lcigar,*md,bam1_strand(pl[i].b));
-					} else
-					{*/
-						incBaseDup(&dup,&dup_counts,bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),(pl[i].b->core.pos)+1,(pl[i].b->core.mpos)+1,pl[i].b->core.mtid,bam1_strand(pl[i].b));
-					//}	
+					cigar = bam1_cigar(pl[i].b);
+					op = bam_cigar_op(cigar[0]);
+					ol = bam_cigar_oplen(cigar[0]);
+					pos_c = pl[i].b->core.pos;
+					if(op==BAM_CSOFT_CLIP)
+						pos_c = pos_c-ol;
+					incBaseDup(&dup,&dup_counts,bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),pos_c+1,(pl[i].b->core.mpos)+1,pl[i].b->core.mtid,bam1_strand(pl[i].b));	
 				}
 			 }
 		}
@@ -971,6 +930,20 @@ void computeRC(float perc, struct target_t *region)
 	int end = positions-1;
 	float max = 0;
 	int i,sum,sumt;
+	
+	
+	if(positions==0)
+	{
+		sum = region->rdata->positions[init].A+
+			  region->rdata->positions[init].C+
+			  region->rdata->positions[init].G+
+			  region->rdata->positions[init].T;
+		region->read_count = region->read_count_global = sum;
+		region->gc = computeGC(region->sequence,0,0);
+		region->from_sel = region->from;
+		region->to_sel = region->to;
+		return;
+	}
 	region->from_sel = init+region->from;
 	region->to_sel = end+region->from;
 	sumt=0;
@@ -1006,17 +979,13 @@ void computeRC(float perc, struct target_t *region)
 				
 	region->read_count = (float)max/(float)positions;
 	region->read_count_global = (float)sumt/((float)(region->to-region->from));
-	
-	// GC content of all region
-	if (region->sequence!=NULL)
-	{
-		region->gc = computeGC(region->sequence,0,positions-1);
-	}
 }
 
 void computeGCRegion(float perc, struct target_t *region)
 {
 	int positions = (int)(floor((float)(region->to-region->from)));
+	if(positions==0)
+		positions=1;
 	if (region->sequence!=NULL)
 	{
 		region->gc = computeGC(region->sequence,0,positions-1);
@@ -1837,7 +1806,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.11\n");
+	fprintf(stderr, "PaCBAM version 1.4.15\n");
 	
 	if (argc == 1)
 	{

@@ -17,8 +17,7 @@ RUN apt-get update                                               && \
     cd include/samtools                                          && \
     make                                                         && \
     cd ../..                                                     && \
-    rm -rf ./lib/linux64/libbam.a                                && \
-    ln -s ../../include/samtools/libbam.a ./lib/linux64/         && \
+    mv include/samtools/libbam.a ./lib/linux64/                  && \
     make -f Makefile.linux
 
 FROM debian:buster-slim
