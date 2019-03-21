@@ -5,6 +5,9 @@
  *
  * Modified by Pete Warden to fix a serious performance problem, support strings as keys
  * and removed thread synchronization - http://petewarden.typepad.com
+ *
+ * Modified by Alessandro Romanel to add a function to iterate externally the hashmap elements
+ * and function to completely deallocate hashmap and all elements in the hashmap.
  */
 #ifndef __HASHMAP_H__
 #define __HASHMAP_H__
