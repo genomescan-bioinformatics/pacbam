@@ -47,7 +47,8 @@ map_t hashmap_new() {
 
 /* The implementation here was originally done by Gary S. Brown.
    Functions were reworked by Pete Warden.
-   I have added function hashmap_iterate_external. */
+   I (Romanel Alessandro) have added function hashmap_iterate_external and hashmap_destry, which 
+   deallocates completely all elements in the hashmap. */
 
   /* ============================================================= */
   /*  COPYRIGHT (C) 1986 Gary S. Brown.  You may use this program, or       */
