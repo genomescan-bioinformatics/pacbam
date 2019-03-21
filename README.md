@@ -33,7 +33,7 @@ Running PaCBAM executable will list all usage options.
 ```
 Usage: 
  ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string]
-          [duptab=string] [regionperc=float] [strandbias]
+          [dedup] [dedupwin=int] [regionperc=float] [strandbias]
 
 bam=string 
  NGS data file in BAM format 
