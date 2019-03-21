@@ -46,8 +46,10 @@ fasta=string
 mode=string 
  Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]
  (default 4)
-duptab=string 
- On-the-fly duplicates filtering lookup table
+dedup 
+ On-the-fly duplicates filtering
+dedupwin=int 
+ Flanking region around captured regions to consider in duplicates filtering [default 1000]
 threads=int 
  Number of threads used (if available) for the pileup computation
  (default 1)
@@ -84,19 +86,8 @@ The reference genome to use in this example can be downloaded at
 
 #### Duplicates filtering
 
-To activate the *on-the-fly read duplicates filtering* add to the command `duptab=FileName.txt` where file `FileName.txt` is a text tab-delimited file with the following format:
-
-```
- 0 100 1
- 100 500 2
- 500 1000 3
-```
-
-This description means that the coverage of all positions with coverage in (0,100] will be normalized considering only 1 read per read duplicates group. A read duplicate group is
-determined by collecting all reads at the position and grouping them considering their strand and alignment positions (both read pair position are used in paired-end sequencing experiments).  
-Similar filtering strategy is used for coverage intervals (100,500] and (500,1000] where at most 2 and 3 reads per read duplicates group are used, respectively.  
-Positions with coverage >1000 will use the threshold of the highest interval (i.e. 3).  
-To perform complete deduplication specify a single interval with 3rd column value equal to 1. 
+To activate the *on-the-fly read duplicates filtering* add to the command `dedup`. To enlarge the genomic window (default 1000) used at captured regions to find duplicated reads use `dedupwin=N` with `N` integer number.
+When single end reads are used you can set `W=0`.
 
 ## Output files
 
