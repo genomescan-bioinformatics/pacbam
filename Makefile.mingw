@@ -8,10 +8,10 @@ CFLAGS = -g -w -Wall -O2
 APPNAME = pacbam
 
 dynamic: 
-	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) 
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c hashmap.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) 
 
 static: 
-	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) -static 
+	$(CC) $(CFLAGS) -I$(INCLUDESDIR) pacbam.c hashmap.c -o $(APPNAME) -L$(LIBRARIESDIR) $(LIBRARIES) -static 
 	
 clean: 
 	rm -f *.o 
