@@ -7,8 +7,10 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <assert.h>
 #include "samtools/sam.h"
 #include "samtools/faidx.h"
+#include "hashmap.h"
 
 /////////////////////////////
 ///CIGAR related macros
@@ -42,8 +44,43 @@ int MAX_CSOFT_CLIP=101;
 char **BED_CHR;
 char **VCF_CHR;
 char **ORD_CHR;
+int max_isize=0;
 
 #define CHUNK_SIZE 32768
+
+///////////////////////////////////////////////////////////
+// Dedup hasmap data structures
+///////////////////////////////////////////////////////////
+
+#define KEY_MAX_LENGTH (128)
+
+typedef struct dedup_struct_s
+{
+    char key_string[KEY_MAX_LENGTH];
+    int32_t chr1;
+    int32_t chr2;
+    int32_t pos_r1;
+    int32_t pos_r2;
+    int bp;
+    int paired;
+    int isize;
+} dedup_struct_t;
+
+
+typedef struct dup_struct_s
+{
+    char key_string[KEY_MAX_LENGTH];
+    char name[KEY_MAX_LENGTH];
+    int bp;
+} dup_struct_t;
+
+
+typedef struct fetch_reads_s
+{
+	bam_plbuf_t *buf;
+	map_t *hmap;
+} fetch_reads_t;
+
 
 ///////////////////////////////////////////////////////////
 // Input parameters
@@ -57,6 +94,7 @@ struct input_args
     char *fasta;
     char *outdir;
     char *duptablename;
+    int dedup;
     int mode;
     int cores;
     int mbq;
@@ -64,6 +102,7 @@ struct input_args
     int mdc;
     //int dupmode;
     int strand_bias;
+	int dedup_window;
     float region_perc;
 };
 
@@ -84,6 +123,8 @@ struct input_args *getInputArgs(char *argv[],int argc)
     arguments->bam = NULL;
     arguments->fasta = NULL;
     arguments->duptablename = NULL;
+    arguments->dedup = 0;
+	arguments->dedup_window = 1000;
     arguments->outdir = (char *)malloc(3);
     sprintf(arguments->outdir,"./");
     arguments->region_perc = 0.5;
@@ -123,19 +164,12 @@ struct input_args *getInputArgs(char *argv[],int argc)
             strcpy(arguments->fasta,argv[i]+6);
 			subSlash(arguments->fasta);
         }
-        else if( strncmp(argv[i],"duptab=",7) == 0 )
+        else if(strncmp(argv[i],"duptab=",7) == 0 )
         {
             arguments->duptablename = (char*)malloc(sizeof(char)*strlen(argv[i])+1);
             strcpy(arguments->duptablename,argv[i]+7);
 			subSlash(arguments->duptablename);
         }
-        /*else if( strncmp(argv[i],"dupmode=",8) == 0 )
-        {
-            tmp = (char*)malloc(strlen(argv[i])-7);
-            strcpy(tmp,argv[i]+8);
-            arguments->dupmode = atoi(tmp);
-            free(tmp);
-        }*/
         else if( strncmp(argv[i],"threads=",8) == 0 )
         {
             tmp = (char*)malloc(strlen(argv[i])-7);
@@ -180,6 +214,17 @@ struct input_args *getInputArgs(char *argv[],int argc)
         else if( strncmp(argv[i],"strandbias",10) == 0 )
         {
             arguments->strand_bias = 1;
+        }
+        else if(strncmp(argv[i],"dedup",6) == 0 )
+        {
+            arguments->dedup = 1;
+        }
+	else if(strncmp(argv[i],"dedupwin=",9) == 0 )
+        {
+            tmp = (char*)malloc(strlen(argv[i])-8);
+            strcpy(tmp,argv[i]+9);
+            arguments->dedup_window = atoi(tmp);
+            free(tmp);
         }
         else
         {
@@ -307,7 +352,8 @@ void printHelp()
     fprintf(stderr,"vcf=string \n List of SNP positions in VCF format (no compressed files are admitted)\n");
     fprintf(stderr,"fasta=string \n Reference genome FASTA format file \n");
     fprintf(stderr,"mode=string \n Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]\n (default 4)\n");  
-    fprintf(stderr,"duptab=string \n On-the-fly duplicates filtering lookup table\n");  
+    fprintf(stderr,"dedup \n On-the-fly duplicates filtering\n"); 
+	fprintf(stderr,"dedupwin=int \n Flanking region around captured regions to consider in duplicates filtering [default 1000]\n");  
     fprintf(stderr,"threads=int \n Number of threads used (if available) for the pileup computation\n (default 1)\n");
     fprintf(stderr,"regionperc=float \n Fraction of the captured region to consider for maximum peak signal characterization\n (default 0.5)\n");
     fprintf(stderr,"mbq=int \n Min base quality\n (default 20)\n");
@@ -338,11 +384,11 @@ Dlist *addDlist(Dlist *list, int *list_counts, int npos, int npos_pair, int nchr
 {
 	Dlist *tmp = list;
 	// Assumes reads in the pileup area ordered by position
-	if(list!=NULL && npos>(list->pos+MAX_CSOFT_CLIP))
-	{
-		countAndFreeDlist(tmp,list_counts);
-		list = NULL;
-	} 
+	//if(list!=NULL && npos>(list->pos+MAX_CSOFT_CLIP))
+	//{
+	//	countAndFreeDlist(tmp,list_counts);
+	//	list = NULL;
+	//} 
 	
 	tmp = list;	
 	while (list!=NULL)
@@ -819,12 +865,170 @@ int FindAlternative(struct region_data *elem, char *s, int index,char *alt)
 // Samtools pileup function definition
 ///////////////////////////////////////////////////////////
 
+int32_t interpret_cigar(int32_t pos, uint32_t *cigar, int n_cigar)
+{
+	int i,op,ol;
+	for(i=0;i<n_cigar;i++)
+	{
+		op = bam_cigar_op(cigar[i]);
+		ol = bam_cigar_oplen(cigar[i]);
+		if (op==BAM_CMATCH || op==BAM_CDIFF || op==BAM_CEQUAL || op==BAM_CREF_SKIP || op==BAM_CDEL)
+			pos+=ol;
+	}
+	return(pos);
+}
+
+void getKey(dedup_struct_t* value, char *key)
+{
+	int32_t p1,p2,c1,c2;
+	if(value->paired==1)
+	{
+		
+		if (value->chr1==value->chr2)
+		{
+			c1=c2=value->chr1;
+			if (value->pos_r1<=value->pos_r2)
+			{
+				p1 = value->pos_r1;
+				p2 = value->pos_r2;
+			} else
+			{
+				p1 = value->pos_r2;
+				p2 = value->pos_r1;
+			}
+		} else
+		{
+			if (value->chr1<value->chr2)
+			{
+				p1 = value->pos_r1;
+				c1 = value->chr1;
+				p2 = value->pos_r2;
+				c2 = value->chr2;
+			} else
+			{
+				p1 = value->pos_r2;
+				c1 = value->chr2;
+				p2 = value->pos_r1;
+				c2 = value->chr1;
+			}
+		}	
+		
+		snprintf(key,KEY_MAX_LENGTH,"%d-%d:%d-%d",c1,c2,p1,p2);
+	} else
+	{
+		if (value->pos_r1<0)
+		{
+			p1 = value->pos_r2;
+			c1 = value->chr2;
+		} else
+		{
+			p1 = value->pos_r1;
+			c1 = value->chr1;
+		}
+		
+		snprintf(key,KEY_MAX_LENGTH,"%d:%d",c1,p1);
+	}
+}
+
+
+// callback for bam_fetch()
+static int fetch_func_dup(const bam1_t *b, void *data)
+{
+    map_t *hmap = (map_t *)data;
+    uint32_t *cigar;
+    char *name;
+    int32_t pos;
+    int res,strand,op,ol,error;
+    dedup_struct_t* value;
+    
+    name = bam1_qname(b);
+    cigar = bam1_cigar(b);
+	strand = bam1_strand(b);
+
+    res = hashmap_get(hmap,name,(void**)(&value));
+    if (res==MAP_MISSING)
+    {
+    	value = malloc(sizeof(dedup_struct_t));
+    	snprintf(value->key_string,KEY_MAX_LENGTH,"%s",name);
+		value->pos_r1 = value->pos_r2 = -1;
+		value->chr1 = value->chr2 = -1;	
+		value->paired = 0;
+		value->isize = abs(b->core.isize);
+		if (b->core.flag&BAM_FPAIRED)
+			value->paired = 1;
+		if (b->core.flag&BAM_FMUNMAP)
+			value->paired = 0;
+	}
+		
+	if(strand==0)
+	{
+		pos = b->core.pos;
+		op = bam_cigar_op(cigar[0]);
+		ol = bam_cigar_oplen(cigar[0]);
+		if(op==BAM_CSOFT_CLIP)
+			pos = pos-ol;
+		if(value->pos_r1<0)
+		{
+			value->pos_r1 = pos;
+			value->chr1 = b->core.tid;
+		} else
+		{
+			value->pos_r2 = pos;
+			value->chr2 = b->core.tid;
+		}
+		value->bp = interpret_cigar(pos,cigar,b->core.n_cigar)-pos;
+		//fprintf(stderr,"%d %d %d\n",interpret_cigar(pos,cigar,b->core.n_cigar),pos,value->bp);
+	} else
+	{
+		pos = interpret_cigar(b->core.pos,cigar,b->core.n_cigar);
+		op = bam_cigar_op(cigar[b->core.n_cigar-1]);
+		ol = bam_cigar_oplen(cigar[b->core.n_cigar-1]);
+		if(op==BAM_CSOFT_CLIP)
+			pos = pos+ol;
+		if(value->pos_r2<0)
+		{
+			value->pos_r2 = pos;
+			value->chr2 = b->core.tid;
+		} else
+		{
+			value->pos_r1 = pos;
+			value->chr1 = b->core.tid;
+		}
+		value->bp += (pos-b->core.pos);
+		//fprintf(stderr,"%d %d %d\n",interpret_cigar(pos,cigar,b->core.n_cigar),pos,value->bp);
+	}
+
+	if (res==MAP_MISSING)
+	{
+		error = hashmap_put(hmap,value->key_string,value);
+		assert(error==MAP_OK);
+	}
+    
+    return 0;
+}
+
+// callback for bam_fetch()
+static int fetch_func_dedup(const bam1_t *b, void *data)
+{
+    fetch_reads_t *buf_data = (fetch_reads_t *)data;
+    dedup_struct_t* value;
+    char *name = bam1_qname(b);
+    int res;
+    res = hashmap_get(buf_data->hmap,name,(void**)(&value));
+
+    if (res==MAP_OK)
+    {
+    	//fprintf(stderr,"USED: %s\n",value->key_string);
+    	bam_plbuf_push(b,buf_data->buf);
+	}
+    return 0;
+}
 
 // callback for bam_fetch()
 static int fetch_func(const bam1_t *b, void *data)
 {
-    bam_plbuf_t *buf = (bam_plbuf_t*)data;
-    bam_plbuf_push(b, buf);
+    bam_plbuf_t *buf = ( bam_plbuf_t * *)data;
+    bam_plbuf_push(b,buf);
     return 0;
 }
 
@@ -841,7 +1045,7 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
     int thr_cov_A,thr_cov_C,thr_cov_G,thr_cov_T,op,ol,pos_c;
 	Dlist *dup[4];
 	int *dup_counts[4];
-    if (tmp->arguments->duptablename != NULL) 
+    /*if (tmp->arguments->duptablename != NULL) 
     {
     	dup[0] = dup[1] = dup[2] = dup[3] = NULL;
 		dup_counts[0] = (int *)malloc(sizeof(int)*MAX_DUP);
@@ -852,7 +1056,7 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 		{
 			dup_counts[0][i] = dup_counts[1][i] = dup_counts[2][i] = dup_counts[3][i] = 0; 
 		}
-    }
+    }*/
 
     if ((int)pos >= tmp->beg && (int)pos < tmp->end)
     {
@@ -870,7 +1074,7 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 				incBase(&(tmp->positions[pos-tmp->beg]),bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos));
 				if (tmp->arguments->strand_bias == 1)
 					incBaseStrand(&(tmp->positions[pos-tmp->beg]),bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),bam1_strand(pl[i].b));
-				if (tmp->arguments->duptablename != NULL) 
+				/*if (tmp->arguments->duptablename != NULL) 
 				{
 					cigar = bam1_cigar(pl[i].b);
 					op = bam_cigar_op(cigar[0]);
@@ -879,12 +1083,12 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 					if(op==BAM_CSOFT_CLIP)
 						pos_c = pos_c-ol;
 					incBaseDup(&dup,&dup_counts,bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),pos_c+1,(pl[i].b->core.mpos)+1,pl[i].b->core.mtid,bam1_strand(pl[i].b));	
-				}
+				}*/
 			 }
 		}
 
 
-		if (tmp->arguments->duptablename != NULL)
+		/*if (tmp->arguments->duptablename != NULL)
 		{
 			// find duplicates threshdold for all bases coverage
 			thr_cov_A = getThrDupLookup(tmp->duptable,tmp->positions[pos-tmp->beg].A);
@@ -893,10 +1097,14 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 			thr_cov_T = getThrDupLookup(tmp->duptable,tmp->positions[pos-tmp->beg].T);
 			
 			// recompute base coverage after lifting
-			countAndFreeDlist(dup[0],dup_counts[0]);countAndFreeDlist(dup[1],dup_counts[1]);countAndFreeDlist(dup[2],dup_counts[2]);countAndFreeDlist(dup[3],dup_counts[3]);
+			countAndFreeDlist(dup[0],dup_counts[0]);
+			countAndFreeDlist(dup[1],dup_counts[1]);
+			countAndFreeDlist(dup[2],dup_counts[2]);
+			countAndFreeDlist(dup[3],dup_counts[3]);
+
 			computeCovBaseDup(&dup_counts,&(tmp->positions[pos-tmp->beg]),thr_cov_A,thr_cov_C,thr_cov_G,thr_cov_T);  
 			free(dup_counts[0]);free(dup_counts[1]);free(dup_counts[2]);free(dup_counts[3]);
-		}
+		}*/
         
     }
     
@@ -1718,12 +1926,19 @@ struct args_thread
 void *PileUp(void *args)
 {
 	struct args_thread *foo = (struct args_thread *)args;
-	int i,r,ref,len,length,count;
+	int i,r,ref,len,length,count,iter,hash_res,hash_res1,error,ll;
 	char s[200];
     char stmp[200];
 	struct region_data *tmp;
 	bam_plbuf_t *buf;
 	faidx_t *fasta;
+
+	map_t *hmap;
+	map_t *hmap_dups;
+	dedup_struct_t* value;
+	dup_struct_t* dup_value;
+	char coords[KEY_MAX_LENGTH];
+	fetch_reads_t *buff_data;
 
 	samfile_t *in = samopen(foo->bam, "rb", 0);
 	bam_index_t *idx = bam_index_load(foo->bam);
@@ -1739,6 +1954,8 @@ void *PileUp(void *args)
 		sprintf(stmp,"%s",foo->target_regions->info[r]->chr);strcat(s,stmp);strcat(s,":");
 		sprintf(stmp,"%u",foo->target_regions->info[r]->from);strcat(s,stmp);strcat(s,"-");
 		sprintf(stmp,"%u",foo->target_regions->info[r]->to);strcat(s,stmp);
+
+		//fprintf(stderr,"%s\n",s);
 
 		bam_parse_region(tmp->in->header,s,&ref,&(tmp->beg),&(tmp->end));
 		
@@ -1771,10 +1988,70 @@ void *PileUp(void *args)
 		}
 		tmp->duptable = foo->duptable;
 		tmp->arguments = foo->arguments;
-
+		
 		buf = bam_plbuf_init(pileup_func,tmp);
-		bam_fetch(tmp->in->x.bam,idx,ref,tmp->beg,tmp->end,buf,fetch_func);
-		bam_plbuf_push(0,buf); 
+		
+		if(foo->arguments->dedup==1)
+		{
+			hmap = hashmap_new();
+			bam_fetch(tmp->in->x.bam,idx,ref,tmp->beg-tmp->arguments->dedup_window,tmp->end+tmp->arguments->dedup_window,hmap,fetch_func_dup);
+			
+			ll = hashmap_length(hmap);
+			hmap_dups = hashmap_new();
+			iter=0;
+			while((hash_res=hashmap_iterate_external(hmap,iter,(void**)(&value)))!=MAP_MISSING)
+			{
+				if(hash_res==MAP_OK)
+				{
+					getKey(value,coords);
+					//fprintf(stderr,"%s %d\n",coords,value->isize);
+					hash_res1 = hashmap_get(hmap_dups,coords,(void**)(&dup_value));
+					if(hash_res1 == MAP_MISSING)
+					{
+						dup_value = malloc(sizeof(dup_struct_t));
+						snprintf(dup_value->key_string,KEY_MAX_LENGTH,"%s",coords);
+						dup_value->bp = value->bp;
+						snprintf(dup_value->name,KEY_MAX_LENGTH,"%s",value->key_string);
+						error = hashmap_put(hmap_dups,dup_value->key_string,dup_value);
+						assert(error==MAP_OK);
+					} else
+					{
+						if(value->bp>dup_value->bp)
+						{
+							dup_value->bp = value->bp;
+							hashmap_remove(hmap,dup_value->name);
+							snprintf(dup_value->name,KEY_MAX_LENGTH,"%s",value->key_string);
+						} else
+						{
+							hashmap_remove(hmap,value->key_string);
+						}
+					}
+				
+				}
+				iter++;
+			}
+			
+			/*iter=0;
+			while((hash_res=hashmap_iterate_external(hmap,iter,(void**)(&value)))!=MAP_MISSING)
+			{
+				if(hash_res==MAP_OK)
+					fprintf(stderr,"ITER %s %d\n",value->key_string,value->isize);
+				iter++;
+			}*/
+			hashmap_destroy(hmap_dups);
+			buff_data = (fetch_reads_t *)malloc(sizeof(fetch_reads_t));
+			buff_data->buf = buf;
+			buff_data->hmap = hmap;
+			bam_fetch(tmp->in->x.bam,idx,ref,tmp->beg,tmp->end,buff_data,fetch_func_dedup);
+			bam_plbuf_push(0,buf); 
+			hashmap_destroy(hmap);
+			free(buff_data);
+		} else
+		{
+			bam_fetch(tmp->in->x.bam,idx,ref,tmp->beg,tmp->end,buf,fetch_func);
+			bam_plbuf_push(0,buf);
+		}
+		
 		bam_plbuf_destroy(buf);
 
 		foo->target_regions->info[r]->rdata = tmp;
@@ -1782,7 +2059,7 @@ void *PileUp(void *args)
 		if(foo->arguments->mode==0||foo->arguments->mode==1||foo->arguments->mode==3)
 		{	
 			computeRC(foo->arguments->region_perc,foo->target_regions->info[r]);
-	      	computeGCRegion(foo->arguments->region_perc,foo->target_regions->info[r]);
+	      	        computeGCRegion(foo->arguments->region_perc,foo->target_regions->info[r]);
 		}
 
 		if(foo->arguments->mode==3)
@@ -1806,7 +2083,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.15\n");
+	fprintf(stderr, "PaCBAM version 1.4.16\n");
 	
 	if (argc == 1)
 	{
