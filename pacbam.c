@@ -346,14 +346,14 @@ void printArguments(struct input_args *arguments)
 
 void printHelp()
 {
-    fprintf(stderr,"\nUsage: \n ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string] [duptab=string] [regionperc=float] [strandbias]\n\n");
+    fprintf(stderr,"\nUsage: \n ./pacbam bam=string bed=string vcf=string fasta=string [mode=int] [threads=int] [mbq=int] [mrq=int] [mdc=int] [out=string] [dedup] [dedupwin=int] [regionperc=float] [strandbias]\n\n");
     fprintf(stderr,"bam=string \n NGS data file in BAM format\n");
     fprintf(stderr,"bed=string \n List of target captured regions in BED format\n");
     fprintf(stderr,"vcf=string \n List of SNP positions in VCF format (no compressed files are admitted)\n");
     fprintf(stderr,"fasta=string \n Reference genome FASTA format file \n");
     fprintf(stderr,"mode=string \n Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]\n (default 4)\n");  
     fprintf(stderr,"dedup \n On-the-fly duplicates filtering\n"); 
-	fprintf(stderr,"dedupwin=int \n Flanking region around captured regions to consider in duplicates filtering [default 1000]\n");  
+    fprintf(stderr,"dedupwin=int \n Flanking region around captured regions to consider in duplicates filtering [default 1000]\n");  
     fprintf(stderr,"threads=int \n Number of threads used (if available) for the pileup computation\n (default 1)\n");
     fprintf(stderr,"regionperc=float \n Fraction of the captured region to consider for maximum peak signal characterization\n (default 0.5)\n");
     fprintf(stderr,"mbq=int \n Min base quality\n (default 20)\n");
@@ -2083,7 +2083,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.5.0\n");
+	fprintf(stderr, "PaCBAM version 1.5.1\n");
 	
 	if (argc == 1)
 	{
@@ -2243,7 +2243,7 @@ int main(int argc, char *argv[])
 	if(arguments->mode==0||arguments->mode==1||arguments->mode==2||arguments->mode==4||arguments->mode==5)
 	{
 		// Print target regions positions
-		sprintf(stmp,"Output single base pileup statistcs files in folder %s",arguments->outdir);
+		sprintf(stmp,"Output single base pileup statistics files in folder %s",arguments->outdir);
 		printMessage(stmp);
 		
 		if (arguments->mode == 0||arguments->mode == 1||arguments->mode == 2)
@@ -2291,7 +2291,7 @@ int main(int argc, char *argv[])
 		outfile_name = (char*)malloc(strlen(tmp_string)+4);
 		sprintf(outfile_name,"%s.rc",tmp_string);
 
-		sprintf(stmp,"Output reagions statistics file in folder %s.",arguments->outdir);
+		sprintf(stmp,"Output regions statistics file in folder %s.",arguments->outdir);
 		printMessage(stmp);
 		outfile = fopen(outfile_name,"w");
 		fprintf(outfile,"chr\tfrom\tto\tfromS\ttoS\trc\trcS\tgc\n");
