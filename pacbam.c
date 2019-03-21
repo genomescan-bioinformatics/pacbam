@@ -2083,7 +2083,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.4.16\n");
+	fprintf(stderr, "PaCBAM version 1.5.0\n");
 	
 	if (argc == 1)
 	{
