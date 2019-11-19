@@ -81,6 +81,33 @@ typedef struct fetch_reads_s
 	map_t *hmap;
 } fetch_reads_t;
 
+/////////////////////////////////////////////////////////////////////////////////////
+// Normal CDF
+/////////////////////////////////////////////////////////////////////////////////////
+
+double erf(double x)
+{
+     double y = 1.0 / ( 1.0 + 0.3275911 * x);
+     return 1 - (((((
+            + 1.061405429  * y
+            - 1.453152027) * y
+            + 1.421413741) * y
+            - 0.284496736) * y
+            + 0.254829592) * y)
+            * exp(-x * x);
+}
+
+double pdf(double x, double mu, double sigma)
+{
+
+      const double pi = 3.14159265;
+      return exp( -1 * (x - mu) * (x - mu) / (2 * sigma * sigma)) / (sigma * sqrt(2 * pi));
+}
+
+double cdf(double x, double mu, double sigma)
+{
+	return 0.5 * (1 + erf((x - mu) / (sigma * sqrt(2.))));
+}
 
 ///////////////////////////////////////////////////////////
 // Input parameters
@@ -100,9 +127,10 @@ struct input_args
     int mbq;
     int mrq;
     int mdc;
+    int genotype;
     //int dupmode;
     int strand_bias;
-	int dedup_window;
+    int dedup_window;
     float region_perc;
 };
 
@@ -118,6 +146,7 @@ struct input_args *getInputArgs(char *argv[],int argc)
     arguments->mode = 4;
     //arguments->dupmode = 0;
     arguments->strand_bias = 0;
+	arguments->genotype = 0;
     arguments->vcf = NULL;
     arguments->bed = NULL;
     arguments->bam = NULL;
@@ -219,12 +248,20 @@ struct input_args *getInputArgs(char *argv[],int argc)
         {
             arguments->dedup = 1;
         }
-	else if(strncmp(argv[i],"dedupwin=",9) == 0 )
+		else if(strncmp(argv[i],"dedupwin=",9) == 0 )
         {
             tmp = (char*)malloc(strlen(argv[i])-8);
             strcpy(tmp,argv[i]+9);
             arguments->dedup_window = atoi(tmp);
             free(tmp);
+        }
+		else if(strncmp(argv[i],"genotype",8) == 0 )
+        {
+            arguments->genotype = 1;
+        }
+		else if(strncmp(argv[i],"genotypeBT",16) == 0 )
+        {
+            arguments->genotype = 2;
         }
         else
         {
@@ -360,6 +397,8 @@ void printHelp()
     fprintf(stderr,"mrq=int \n Min read quality\n (default 1)\n");
     fprintf(stderr,"mdc=int \n Min depth of coverage that a position should have to be considered in the output\n (default 0)\n");
     fprintf(stderr,"strandbias \n Print strand bias count information\n");
+    fprintf(stderr,"genotype \n Print genotype calls for input SNPs using a strategy based on an allelic fraction cutoff threshold at 20%\n");
+    fprintf(stderr,"genotypeBT \n Print genotype calls for input SNPs using a strategy based on a binomial test with significance at 1%)\n");
     fprintf(stderr,"out=string \n Path of output directory (default is the current directory)\n\n");
 }
 
@@ -1642,10 +1681,19 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 	float af,afG;
 	int j=0;
 	char *alt_base = (char*)malloc(2*sizeof(char));
+    char genotype[5];
+    double z,pval;
 
 	if(arguments->mode==0||arguments->mode==1||arguments->mode==2)
-		fprintf(outfileSNPs,"chr\tpos\trsid\tref\talt\tA\tC\tG\tT\taf\tcov\n");
-		
+	{
+		if (arguments->genotype==0)
+		{
+			fprintf(outfileSNPs,"chr\tpos\trsid\tref\talt\tA\tC\tG\tT\taf\tcov\n");
+		} else
+		{
+			fprintf(outfileSNPs,"chr\tpos\trsid\tref\talt\tA\tC\tG\tT\taf\tcov\tgenotype\n");
+		}
+	}	
 	if(arguments->mode==0||arguments->mode==1)
 	{
 		fprintf(outfileSNVs,"chr\tpos\tref\talt\tA\tC\tG\tT\taf\tcov");
@@ -1780,7 +1828,28 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 	
 					if (cov>=arguments->mdc&&(arguments->mode==0||arguments->mode==1||arguments->mode==2))
 					{
-						fprintf(outfileSNPs,"%s\t%u\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%d\n",
+						if (arguments->genotype==1)
+						{
+							if (af<0.2)
+								sprintf(genotype,"0/0");
+							if (af>=0.2&&af<=0.8)
+								sprintf(genotype,"0/1");
+							if (af>0.8)
+								sprintf(genotype,"1/1");
+						} else if (arguments->genotype==2)
+						{
+							z = ((ref/(ref+alt))-0.55)/sqrt((0.55*0.45)/(ref+alt));
+           					if (z<0.)
+                				z=z*(-1.0);
+            				pval = 2*(1-cdf(z,0,1));
+							if (pval<=0.01 && ref>alt)
+								sprintf(genotype,"0/0");
+							if (pval<=0.01 && ref<alt)
+								sprintf(genotype,"1/1");
+							if (pval>0.01)
+								sprintf(genotype,"0/1");
+						}
+						fprintf(outfileSNPs,"%s\t%u\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%.6f\t%d",
 							target_regions->info[r]->chr,
 							target_regions->info[r]->from+i,
 							snps->info[j]->rsid,
@@ -1791,6 +1860,13 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 							target_regions->info[r]->rdata->positions[i].G,
 							target_regions->info[r]->rdata->positions[i].T,
 							af,cov);
+						if (arguments->genotype>0)
+						{
+							fprintf(outfileSNPs,"\t%s\n",genotype);
+						} else
+						{
+							fprintf(outfileSNPs,"\n");
+						}
 					}
 					j++;
 					if(j>=snps->length)
@@ -2083,7 +2159,7 @@ void *PileUp(void *args)
 
 int main(int argc, char *argv[])
 {
-	fprintf(stderr, "PaCBAM version 1.5.1\n");
+	fprintf(stderr, "PaCBAM version 1.6.0\n");
 	
 	if (argc == 1)
 	{

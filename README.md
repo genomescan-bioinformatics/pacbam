@@ -170,7 +170,7 @@ chr	pos	rsid	ref	alt	A	C	G	T	af	cov
 20	68351	rs757428359	A	G	130	0	0	0	0.000000	130
 20	68363	rs200192457	A	T	129	0	0	0	0.000000	129
 20	68373	rs745889706	T	C	0	0	0	130	0.000000	130
-20	68375	rs754912258	A	G	104	0	0	0	0.000000	104
+20	68375	rs754912258	A	G	54	0	50	0	0.480769	104
 20	68396	rs138777928	C	T	0	141	0	0	0.000000	141
 20	68397	rs748102612	G	A	0	0	141	0	0.000000	141
 20	68406	rs771803424	A	G	140	0	0	0	0.000000	140
@@ -178,6 +178,29 @@ chr	pos	rsid	ref	alt	A	C	G	T	af	cov
 20	76658	rs745496891	C	A	0	49	0	0	0.000000	49
 ...
 ```
+
+when `genotype` or `genotypeBT` option is used, the output format is the following:
+
+```
+chr	pos	rsid	ref	alt	A	C	G	T	af	cov	genotype
+20	68351	rs757428359	A	G	130	0	0	0	0.000000	130	0/0
+20	68363	rs200192457	A	T	129	0	0	0	0.000000	129	0/0
+20	68373	rs745889706	T	C	0	0	0	130	0.000000	130	0/0
+20	68375	rs754912258	A	G	54	0	50	0	0.480769	104	0/1
+20	68396	rs138777928	C	T	0	141	0	0	0.000000	141	0/0
+20	68397	rs748102612	G	A	0	0	141	0	0.000000	141	0/0
+20	68406	rs771803424	A	G	140	0	0	0	0.000000	140	0/0
+20	76654	rs564320474	G	T	0	0	31	0	0.000000	31	0/0
+20	76658	rs745496891	C	A	0	49	0	0	0.000000	49	0/0
+...
+```
+
+where `0/0`, `0/1` and `1/1` represent, respectively, the reference base homozygous genotype, the heterozygous genotype and the alternative base homozygous genotype.
+
+The `genotype` option implements an allelic fraction cutoff method where heterozygous geneotype is assigned when the position allelic fraction is the range (0.2,0.8). The `genotypeBT` option, instead, implements a Binomial test statistics at significance of 1% and with probability p=0.55 (reference) and q=45 (alternative) to account for the reference mapping bias. 
+
+
+
 
 ## Visual reports
 PaCBAM includes a script to generate visual data reports written in python.  
