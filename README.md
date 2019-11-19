@@ -197,7 +197,7 @@ chr	pos	rsid	ref	alt	A	C	G	T	af	cov	genotype
 
 where `0/0`, `0/1` and `1/1` represent, respectively, the reference base homozygous genotype, the heterozygous genotype and the alternative base homozygous genotype.
 
-The `genotype` option implements an allelic fraction cutoff method where heterozygous geneotype is assigned when the position allelic fraction is the range (0.2,0.8). The `genotypeBT` option, instead, implements a Binomial test statistics at significance of 1% and with probability p=0.55 (reference) and q=45 (alternative) to account for the reference mapping bias. 
+The `genotype` option implements an allelic fraction cutoff method where heterozygous genotype is assigned when the position allelic fraction is in the range (0.2,0.8). The `genotypeBT` option, instead, implements a Binomial Test statistics at significance of 1% and with probabilities p=0.55 (reference) and q=45 (alternative) to account for the reference mapping bias. 
 
 
 
