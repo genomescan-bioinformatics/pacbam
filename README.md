@@ -67,6 +67,10 @@ mdc=int
  (default 0)
 strandbias 
  Print strand bias count information
+genotype 
+ Print genotype calls for input SNPs using a strategy based on an allelic fraction cutoff threshold at 20%
+genotypeBT 
+ Print genotype calls for input SNPs using a strategy based on a binomial test with significance at 1%)
 out=string 
  Path of output directory (default is the current directory)
 ```
