@@ -1,4 +1,5 @@
-#! /usr/bin/python
+#! /usr/bin/python3
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -111,24 +112,31 @@ def pileupReport(filename, binSize,outFile):
 
 def SNPsReport(filename,lowerBound,upperBound,outFile):
 
+    hasGenotype = False
     with open(filename) as snps:
         totalBins = [0,0,0] #3 Bins
-        next(snps) #skip header 
+        header = next(snps) #check i header has the genotype computed from pacbam
+        hasGenotype = "genotype" in header
 
         coverageDistribution = []
 
         for l in snps:
-            l = l.split('\t') 
+            l = l.rstrip().split('\t') 
             AF = float(l[9]) #get allelic fraction
             coverage = int(l[10])
             coverageDistribution.append(coverage)
             #divide the value in the 3 totalBins 0 <= AF < lowerbound, lowerbound < AF <= upperBound, AF > upperbound
-            if AF <= lowerBound:
-                totalBins[0] += 1
-            elif AF <= upperBound:
-                totalBins[1] += 1
+            if not hasGenotype:
+                if AF <= lowerBound:
+                    totalBins[0] += 1
+                elif AF <= upperBound:
+                    totalBins[1] += 1
+                else:
+                    totalBins[2] += 1
             else:
-                totalBins[2] += 1
+                genotype = l[11]
+                genotype = int(genotype[0]) + int(genotype[2])
+                totalBins[genotype] += 1
 
     # 3 Bins (for labels)
     q1 = (np.percentile(coverageDistribution,25))
@@ -138,10 +146,11 @@ def SNPsReport(filename,lowerBound,upperBound,outFile):
 
     with open(filename) as snps:
         stratBins = [[0,0],[0,0],[0,0],[0,0]] #bins for each base for heterozygous and homozygous
-        next(snps) #skip header 
+        header = next(snps) #check i header has the genotype computed from pacbam
+        hasGenotype = "genotype" in header
 
         for l in snps:
-            l = l.split('\t') 
+            l = l.rstrip().split('\t') 
             AF = float(l[9]) #get allelic fraction
             coverage = int(l[10])
             #check the coverage first quintile second third or forth
@@ -155,10 +164,20 @@ def SNPsReport(filename,lowerBound,upperBound,outFile):
                 binsIndex = 3
 
             # check the allelic fraction for heterozygous or homozygous
-            if AF <= upperBound and AF > lowerBound:
-                stratBins[binsIndex][0] += 1
-            elif AF > upperBound:
-                stratBins[binsIndex][1] += 1
+            if not hasGenotype:
+                if AF <= upperBound and AF > lowerBound:
+                    stratBins[binsIndex][0] += 1
+                elif AF > upperBound:
+                    stratBins[binsIndex][1] += 1
+
+            else:
+                genotype = l[11]
+                genotype = int(genotype[0]) + int(genotype[2])
+                if genotype == 1:
+                    stratBins[binsIndex][0] += 1
+                elif genotype == 2:
+                    stratBins[binsIndex][1] += 1
+
 
     #barplot of SNPs
     pET = plt.bar(0,totalBins[1], color=EColor) 
@@ -178,7 +197,12 @@ def SNPsReport(filename,lowerBound,upperBound,outFile):
 
     Epatch = mpatches.Patch(color=EColor, label='Alternative Heterozygous')
     Opatch = mpatches.Patch(color=OColor, label='Alternative Homozygous')
-    plt.text(.0, -.134, "File: " + filename + "\nReference Homozygous: AF $\leq$ " + str(lowerBound) + "\nAlternative Heterozygous: " + str(lowerBound) + " < AF $\leq$ " + str(upperBound) +  "\nAlternative Homozygous: AF > " + str(upperBound) ,transform=plt.gca().transAxes)
+
+    if not hasGenotype:
+        plt.text(.0, -.134, "File: " + filename + "\nReference Homozygous: AF $\leq$ " + str(lowerBound) + "\nAlternative Heterozygous: " + str(lowerBound) + " < AF $\leq$ " + str(upperBound) +  "\nAlternative Homozygous: AF > " + str(upperBound) ,transform=plt.gca().transAxes)
+    else:
+        plt.text(.0, -.1, "File: " + filename,transform=plt.gca().transAxes)
+
     plt.text(0.5,0.95,s=("Total SNPs: %d\nReference Homozygous SNPs: %d") % (sum(totalBins),totalBins[0]),horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes, bbox=dict(alpha=0))
     plt.xticks(range(5), ["Total", "CoverageQ1", "CoverageQ2", "CoverageQ3", "CoverageQ4"])
     plt.ylabel("Count")
@@ -389,7 +413,7 @@ if __name__ == '__main__':
 
     #report on the pilup
     if mode == 1 or mode == 4:
-        print "Computing Pileup Report"
+        print("Computing Pileup Report")
         pileupReport(pileupFile, 0.001,pp)
 
     #report on snp
@@ -399,12 +423,12 @@ if __name__ == '__main__':
 
     #report on SNVs
     if mode == 0 or mode == 1:
-        print "Computing SNVs Report"
+        print("Computing SNVs Report")
         SNVsReport(snvsFile,pp,args.strandBias)
 
     #report rc
     if mode == 0 or mode == 1 or mode == 3:
-        print "Computing RC Report"
+        print("Computing RC Report")
         RCReport(RCFile,pp)
 
     pp.close()#close the output file

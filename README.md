@@ -8,6 +8,9 @@ PaCBAM implements a fast and scalable multi-core computational engine, generates
 Binaries for Linux, macOS and Windows platforms can be found in folder `binaries`.  
 PaCBAM is containerized from Docker and Singularity hubs.
 
+Docker: https://hub.docker.com/r/cibiobcg/pacbam/tags
+Singularity: https://singularity-hub.org/collections/1079
+
 ## Compilation from source code
 
 To install PaCBAM clone the repository and compile the C source code.
@@ -216,9 +219,9 @@ It provides different graphs for every output file:
 	pileup: cumulative coverage and allelic fraction distributions  
 
 #### Requirements
-Python 2.7.12  
-Numpy 1.14.2  
-matplotlib 2.2.2  
+Python 3.6.8
+Numpy 1.17.3
+matplotlib 3.1.1
 
 #### Usage
 The report scripts expects as input the prefix of the output files from PaCBAM and the mode in which it was runned.
