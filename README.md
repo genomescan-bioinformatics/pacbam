@@ -230,7 +230,7 @@ Numpy 1.17.3
 matplotlib 3.1.1  
 
 #### Usage
-The report scripts expects as input the prefix of the output files from PaCBAM and the mode in which it was runned.
+The report scripts expect as input the prefix of the output files from PaCBAM and the mode in which it was runned.
 
 ```
 Usage:
