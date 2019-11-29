@@ -24,9 +24,9 @@ FROM debian:buster-slim
 
 
 RUN apt-get update                       && \
-    apt-get install -y python3.6            \
-                       python-matplotlib    \
-                       python-numpy      && \
+    apt-get install -y python3            \
+                       python3-matplotlib    \
+                       python3-numpy      && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /build/pacbam/pacbam /usr/bin/

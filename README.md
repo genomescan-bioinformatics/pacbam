@@ -8,8 +8,14 @@ PaCBAM implements a fast and scalable multi-core computational engine, generates
 Binaries for Linux, macOS and Windows platforms can be found in folder `binaries`.  
 PaCBAM is containerized from Docker and Singularity hubs.
 
-Docker: https://hub.docker.com/r/cibiobcg/pacbam/tags
-Singularity: https://singularity-hub.org/collections/1079
+Docker: https://hub.docker.com/r/cibiobcg/pacbam/tags  
+Singularity: https://singularity-hub.org/collections/1079  
+
+Alternatively, you can build a Singularity image.
+
+```bash
+singularity pull ./pacbam.simg docker://cibiobcg/pacbam:latest
+```
 
 ## Compilation from source code
 
@@ -219,9 +225,9 @@ It provides different graphs for every output file:
 	pileup: cumulative coverage and allelic fraction distributions  
 
 #### Requirements
-Python 3.6.8
-Numpy 1.17.3
-matplotlib 3.1.1
+Python 3.6.8  
+Numpy 1.17.3  
+matplotlib 3.1.1  
 
 #### Usage
 The report scripts expects as input the prefix of the output files from PaCBAM and the mode in which it was runned.
@@ -256,6 +262,16 @@ The following command computes the visual reports for the example data.
 ./pacbam_report.py -i example/NGSData -m 1 -o reports/reports.pdf
 
 ```
+
+If you are using a container:
+
+```
+docker run cibiobcg/pacbam:latest pacbam_report.py -i example/NGSData -m 1 -o reports/reports.pdf
+
+singularity run pacbam.simg pacbam_report.py -i example/NGSData -m 1 -o reports/reports.pdf
+
+```
+
 
 #### Output file
 The report script produces a single pdf file with all the graphs of the choosen mode.
