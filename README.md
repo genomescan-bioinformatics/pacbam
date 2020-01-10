@@ -292,4 +292,5 @@ The report script produces a single pdf file with all the graphs of the choosen 
  
 PaCBAM is released under [MIT](https://bitbucket.org/CibioBCG/pacbam/src/master/COPYING) licence.
 
-## Credit
+## Cite
+Samuel Valentini, Tarcisio Fedrizzi, Francesca Demichelis, Alessandro Romanel. PaCBAM: fast and scalable processing of whole exome and targeted sequencing data. BMC Genomics, 20:1018, 2019. [doi]
