@@ -1719,7 +1719,13 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 	}
 	
 	if(arguments->mode==1||arguments->mode==4)
-		fprintf(outfileALL,"chr\tpos\tref\tA\tC\tG\tT\taf\tcov\n");
+        if(arguments->strand_bias==1)
+        {
+            fprintf(outfileALL,"chr\tpos\tref\tA\tC\tG\tT\taf\tcov\tArs\tCrs\tGrs\tTrs\n");
+        }
+        else {
+            fprintf(outfileALL,"chr\tpos\tref\tA\tC\tG\tT\taf\tcov\n");
+        }
 
 	if(arguments->mode==5)
 		fprintf(outfileALL,"chr\tpos\tref\tA\tC\tG\tT\taf\tcov\trsid\n");
@@ -1901,7 +1907,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 					if(covG>0)
 						afG=((float)altG)/((float)covG);
 							
-					buffer_count += sprintf(&file_buffer[buffer_count],"%s\t%u\t%c\t%d\t%d\t%d\t%d\t%.6f\t%d\n",
+					buffer_count += sprintf(&file_buffer[buffer_count],"%s\t%u\t%c\t%d\t%d\t%d\t%d\t%.6f\t%d",
 							target_regions->info[r]->chr,
 							target_regions->info[r]->from+i,
 							target_regions->info[r]->sequence[i],
@@ -1909,14 +1915,24 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 							target_regions->info[r]->rdata->positions[i].C,
 							target_regions->info[r]->rdata->positions[i].G,
 							target_regions->info[r]->rdata->positions[i].T,afG,covG);
-
-				     // if the chunk is big enough, write it.
-				     if(buffer_count>=CHUNK_SIZE)
-				     {
-					   fwrite(file_buffer,CHUNK_SIZE,1,outfileALL);
-					   buffer_count-=CHUNK_SIZE;
-					   memcpy(file_buffer,&file_buffer[CHUNK_SIZE],buffer_count);
-				     }
+                    
+                    if(arguments->strand_bias==1)
+                    {
+                        buffer_count += sprintf(&file_buffer[buffer_count], "\t%d\t%d\t%d\t%d\n",
+                            target_regions->info[r]->rdata->positions[i].Asb,
+                            target_regions->info[r]->rdata->positions[i].Csb,
+                            target_regions->info[r]->rdata->positions[i].Gsb,
+                            target_regions->info[r]->rdata->positions[i].Tsb);
+                    } else {
+                        buffer_count += sprintf(&file_buffer[buffer_count], "\n");
+                    }
+                    // if the chunk is big enough, write it.
+                    if(buffer_count>=CHUNK_SIZE)
+                    {
+                        fwrite(file_buffer,CHUNK_SIZE,1,outfileALL);
+                        buffer_count-=CHUNK_SIZE;
+                        memcpy(file_buffer,&file_buffer[CHUNK_SIZE],buffer_count);
+                    }
 				}
 					
 				if (arguments->mode==0||arguments->mode==1)
