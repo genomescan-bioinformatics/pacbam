@@ -53,8 +53,8 @@ vcf=string
 fasta=string 
  Reference genome FASTA format file 
 mode=string 
- Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]
- (default 4)
+ Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP|6=BAMCOUNT]
+ (default 6)
 dedup 
  On-the-fly duplicates filtering
 dedupwin=int 
