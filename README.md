@@ -140,6 +140,23 @@ chr	pos	ref	A	C	G	T	af	cov
 ...
 ```
 
+#### Single-base resolution pileup (mode 6: BAMCOUNT)
+For each genomic position in the target provides the read depth of the 4 possible bases A, C, G and T, the total depth of coverage, the allelic fraction (e.g. FracA), and the strand bias information for each base (e.g. StrandA).
+
+```
+chr     pos     ref     cov     CountA  FracA   StrandA CountC  FracC   StrandC CountG  FracG   StrandG CountT  FracT   StrandT
+20      68348   G       129     0       0.0000  0.00    0       0.0000  0.00    129     0.0000  1.00    0       0.0000  0.00
+20      76643   C       19      0       0.0000  0.00    19      1.0000  0.79    0       0.0000  0.00    0       0.0000  0.00
+20      76644   A       19      19      1.0000  0.79    0       0.0000  0.00    0       1.0000  0.00    0       0.0000  0.00
+20      76645   G       19      0       0.0000  0.00    0       0.0000  0.00    19      0.0000  0.79    0       0.0000  0.00
+20      76646   G       19      0       0.0000  0.00    0       0.0000  0.00    19      0.0000  0.79    0       0.0000  0.00
+20      76647   T       15      0       0.0000  0.00    0       0.0000  0.00    0       0.0000  0.00    15      1.0000  1.00
+20      76648   A       15      15      1.0000  1.00    0       0.0000  0.00    0       1.0000  0.00    0       0.0000  0.00
+20      76649   G       15      0       0.0000  0.00    0       0.0000  0.00    15      0.0000  1.00    0       0.0000  0.00
+20      76650   C       15      0       0.0000  0.00    15      1.0000  1.00    0       0.0000  0.00    0       0.0000  0.00
+...
+```
+
 #### Positions with reads support for alternative base
 Provides pileup information only for position with positive VAF, computed using the alternative base with highest read depth (if any).
 
