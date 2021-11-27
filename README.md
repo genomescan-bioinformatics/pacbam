@@ -1,28 +1,16 @@
+# NON OFFICIAL REPOSITORY!! See https://bitbucket.org/CibioBCG/pacbam/src/master/ for the official repository
+
 # PaCBAM
 
 PaCBAM is a C command line tool for the complete characterization of genomic regions and single nucleotide positions from next-generation sequencing data.  
 PaCBAM implements a fast and scalable multi-core computational engine, generates exhaustive output files for downstream analysis, introduces an innovative on-the-fly read duplicates filtering strategy and provides comprehensive visual reports. 
-
-## Multi-platform binaries and Docker/Singularity containers
-
-Binaries for Linux, macOS and Windows platforms can be found in folder `binaries`.  
-PaCBAM is containerized from Docker and Singularity hubs.
-
-Docker: https://hub.docker.com/r/cibiobcg/pacbam/tags  
-Singularity: https://singularity-hub.org/collections/1079  
-
-Alternatively, you can build a Singularity image.
-
-```bash
-singularity pull ./pacbam.simg docker://cibiobcg/pacbam:latest
-```
 
 ## Compilation from source code
 
 To install PaCBAM clone the repository and compile the C source code.
 
 ```bash
-git clone https://CibioBCG@bitbucket.org/CibioBCG/pacbam.git  
+git clone https://github.com/gerbenvoshol/pacbam.git 
 cd pacbam
 make -f Makefile.linux
 ```
