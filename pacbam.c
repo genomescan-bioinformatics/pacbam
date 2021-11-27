@@ -139,7 +139,7 @@ struct input_args *getInputArgs(char *argv[], int argc)
 	arguments->mbq = 20;
 	arguments->mrq = 1;
 	arguments->mdc = 0;
-	arguments->mode = 4;
+	arguments->mode = 6;
 	//arguments->dupmode = 0;
 	arguments->strand_bias = 0;
 	arguments->genotype = 0;
@@ -162,6 +162,9 @@ struct input_args *getInputArgs(char *argv[], int argc)
 			strcpy(tmp, argv[i] + 5);
 			arguments->mode = atoi(tmp);
 			free(tmp);
+			if (arguments->mode == 6) {
+				arguments->strand_bias = 1;
+			}
 		} else if (strncmp(argv[i], "bed=", 4) == 0) {
 			arguments->bed = (char*)malloc(sizeof(char) * strlen(argv[i]) + 1);
 			strcpy(arguments->bed, argv[i] + 4);
@@ -297,8 +300,8 @@ int checkInputArgs(struct input_args *arguments)
 		fprintf(stderr, "ERROR: minimum depth of coverage should be positive.\n");
 		control = 1;
 	}
-	if (arguments->mode < 0 || arguments->mode > 5) {
-		fprintf(stderr, "ERROR: mode should be in 0,1,2,3,4,5.\n");
+	if (arguments->mode < 0 || arguments->mode > 6) {
+		fprintf(stderr, "ERROR: mode should be in 0,1,2,3,4,5,6.\n");
 		control = 1;
 	}
 	if (arguments->region_perc < 0 || arguments->region_perc > 1) {
@@ -335,7 +338,7 @@ void printHelp()
 	fprintf(stderr, "bed=string \n List of target captured regions in BED format\n");
 	fprintf(stderr, "vcf=string \n List of SNP positions in VCF format (no compressed files are admitted)\n");
 	fprintf(stderr, "fasta=string \n Reference genome FASTA format file \n");
-	fprintf(stderr, "mode=string \n Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP]\n (default 4)\n");
+	fprintf(stderr, "mode=string \n Execution mode [0=RC+SNPs+SNVs|1=RC+SNPs+SNVs+PILEUP(not including SNPs)|2=SNPs|3=RC|4=PILEUP|6=BAMCOUNT]\n (default 4)\n");
 	fprintf(stderr, "dedup \n On-the-fly duplicates filtering\n");
 	fprintf(stderr, "dedupwin=int \n Flanking region around captured regions to consider in duplicates filtering [default 1000]\n");
 	fprintf(stderr, "threads=int \n Number of threads used (if available) for the pileup computation\n (default 1)\n");
@@ -1633,6 +1636,10 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 		fprintf(outfileALL, "chr\tpos\tref\tA\tC\tG\tT\taf\tcov\trsid\n");
 	}
 
+	if (arguments->mode == 6) {
+		fprintf(outfileALL, "chr\tpos\tref\tcov\tCountA\tFracA\tStrandA\tCountC\tFracC\tStrandC\tCountG\tFracG\tStrandG\tCountT\tFracT\tStrandT\n");
+	}
+
 	printID = 0;
 
 
@@ -1817,6 +1824,93 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 					} else {
 						buffer_count += sprintf(&file_buffer[buffer_count], "\n");
 					}
+					// if the chunk is big enough, write it.
+					if (buffer_count >= CHUNK_SIZE) {
+						fwrite(file_buffer, CHUNK_SIZE, 1, outfileALL);
+						buffer_count -= CHUNK_SIZE;
+						memcpy(file_buffer, &file_buffer[CHUNK_SIZE], buffer_count);
+					}
+				}
+
+				if (arguments->mode == 6) {
+					covG = getSum(target_regions->info[r]->rdata, i);
+					altG = getAlternativeSum(target_regions->info[r]->rdata, &(target_regions->info[r]->sequence[i]), i);
+					afG = 0;
+					if (covG > 0) {
+						afG = ((float)altG) / ((float)covG);
+					}
+
+					double FracA, StrandA;
+					if (target_regions->info[r]->rdata->positions[i].A) {
+						StrandA = (target_regions->info[r]->rdata->positions[i].A - target_regions->info[r]->rdata->positions[i].Asb) / (double) target_regions->info[r]->rdata->positions[i].A;
+					} else {
+						StrandA = 0.0;
+					}
+
+					if (covG) {
+						FracA = target_regions->info[r]->rdata->positions[i].A / (double) covG;
+					} else {
+						FracA = 0.0;
+					}
+
+					double FracC, StrandC;
+					if (target_regions->info[r]->rdata->positions[i].C) {
+						StrandC = (target_regions->info[r]->rdata->positions[i].C - target_regions->info[r]->rdata->positions[i].Csb) / (double) target_regions->info[r]->rdata->positions[i].C;
+					} else {
+						StrandC = 0.0;
+					}
+
+					if (covG) {
+						FracC = target_regions->info[r]->rdata->positions[i].C / (double) covG;
+					} else {
+						FracC = 0.0;
+					}
+
+					double FracG, StrandG;
+					if (target_regions->info[r]->rdata->positions[i].G) {
+						StrandG = (target_regions->info[r]->rdata->positions[i].G - target_regions->info[r]->rdata->positions[i].Gsb) / (double) target_regions->info[r]->rdata->positions[i].G;
+					} else {
+						StrandG = 0.0;
+					}
+
+					if (covG) {
+						FracG = target_regions->info[r]->rdata->positions[i].A / (double) covG;
+					} else {
+						FracG = 0.0;
+					}
+
+					double FracT, StrandT;
+					if (target_regions->info[r]->rdata->positions[i].T) {
+						StrandT = (target_regions->info[r]->rdata->positions[i].T - target_regions->info[r]->rdata->positions[i].Tsb) / (double) target_regions->info[r]->rdata->positions[i].T;
+					} else {
+						StrandT = 0.0;
+					}
+
+					if (covG) {
+						FracT = target_regions->info[r]->rdata->positions[i].T / (double) covG;
+					} else {
+						FracT = 0.0;
+					}
+					// chr\tpos\tref\tcov\tCountA\tFracA\tStrandA\tCountC\tFracC\tStrandC\tCountG\tFracG\tStrandG\tCountT\tFracT\tStrandT
+					
+					buffer_count += sprintf(&file_buffer[buffer_count], "%s\t%u\t%c\t%d\t%d\t%.4f\t%.2f\t%d\t%.4f\t%.2f\t%d\t%.4f\t%.2f\t%d\t%.4f\t%.2f\n",
+					                        target_regions->info[r]->chr,
+					                        target_regions->info[r]->from + i,
+					                        target_regions->info[r]->sequence[i],
+					                        covG,
+					                        target_regions->info[r]->rdata->positions[i].A,
+					                        FracA,
+					                        StrandA,
+					                        target_regions->info[r]->rdata->positions[i].C,
+					                        FracC,
+					                        StrandC,
+					                        target_regions->info[r]->rdata->positions[i].G,
+					                        FracG,
+					                        StrandG,
+					                        target_regions->info[r]->rdata->positions[i].T,
+					                        FracT,
+					                        StrandT);
+
 					// if the chunk is big enough, write it.
 					if (buffer_count >= CHUNK_SIZE) {
 						fwrite(file_buffer, CHUNK_SIZE, 1, outfileALL);
@@ -2201,7 +2295,7 @@ int main(int argc, char *argv[])
 
 	chdir(arguments->outdir);
 
-	if (arguments->mode == 0 || arguments->mode == 1 || arguments->mode == 2 || arguments->mode == 4 || arguments->mode == 5) {
+	if (arguments->mode == 0 || arguments->mode == 1 || arguments->mode == 2 || arguments->mode == 4 || arguments->mode == 5 || arguments->mode == 6) {
 		// Print target regions positions
 		sprintf(stmp, "Output single base pileup statistics files in folder %s", arguments->outdir);
 		printMessage(stmp);
@@ -2223,7 +2317,7 @@ int main(int argc, char *argv[])
 			sprintf(outfile_name, "%s.pabs", tmp_string);
 			outfileSNVs = fopen(outfile_name, "w");
 		}
-		if (arguments->mode == 1 || arguments->mode == 4 || arguments->mode == 5) {
+		if (arguments->mode == 1 || arguments->mode == 4 || arguments->mode == 5 || arguments->mode == 6) {
 			if (outfile_name != NULL) {
 				free(outfile_name);
 			}
