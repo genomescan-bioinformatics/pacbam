@@ -162,6 +162,8 @@ struct input_args *getInputArgs(char *argv[], int argc)
 			strcpy(tmp, argv[i] + 5);
 			arguments->mode = atoi(tmp);
 			free(tmp);
+			// mode 6 requires strand_bias to calculate StrandA, StrandC, StrandG and StrandT
+			// The fraction of forward reads supporting the call
 			if (arguments->mode == 6) {
 				arguments->strand_bias = 1;
 			}
@@ -518,12 +520,12 @@ int getThrDupLookup(struct lookup_dup *duptable, int cov)
 }
 
 struct pos_pileup {
-	uint32_t pos;
-	int A;
+	uint32_t pos; // Max 4,294,967,295
+	int A;        // Count of fwd mapped read. Max 2,147,483,647
 	int C;
 	int G;
 	int T;
-	int Asb;
+	int Asb;      // Count of rc mapped read
 	int Csb;
 	int Gsb;
 	int Tsb;
