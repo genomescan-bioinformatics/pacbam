@@ -1876,7 +1876,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 					}
 
 					if (covG) {
-						FracG = target_regions->info[r]->rdata->positions[i].A / (double) covG;
+						FracG = target_regions->info[r]->rdata->positions[i].G / (double) covG;
 					} else {
 						FracG = 0.0;
 					}
