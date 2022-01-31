@@ -529,6 +529,7 @@ struct pos_pileup {
 	int Csb;
 	int Gsb;
 	int Tsb;
+	int del;      // Count deletions
 };
 
 // Data for a single region
@@ -1074,6 +1075,8 @@ static int pileup_func(uint32_t tid, uint32_t pos, int n, const bam_pileup1_t *p
 						pos_c = pos_c-ol;
 					incBaseDup(&dup,&dup_counts,bam1_seqi(bam1_seq(pl[i].b),pl[i].qpos),pos_c+1,(pl[i].b->core.mpos)+1,pl[i].b->core.mtid,bam1_strand(pl[i].b));
 				}*/
+			} else if (pl[i].is_del) {
+				tmp->positions[pos - tmp->beg].del++;
 			}
 		}
 
@@ -1836,6 +1839,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 
 				if (arguments->mode == 6) {
 					covG = getSum(target_regions->info[r]->rdata, i);
+					int del = target_regions->info[r]->rdata->positions[i].del;
 					altG = getAlternativeSum(target_regions->info[r]->rdata, &(target_regions->info[r]->sequence[i]), i);
 					afG = 0;
 					if (covG > 0) {
@@ -1899,7 +1903,7 @@ void printTargetRegionSNVsPileup(FILE *outfileSNPs, FILE *outfileSNVs, FILE *out
 					                        target_regions->info[r]->chr,
 					                        target_regions->info[r]->from + i,
 					                        target_regions->info[r]->sequence[i],
-					                        covG,
+					                        covG + del,
 					                        target_regions->info[r]->rdata->positions[i].A,
 					                        FracA,
 					                        StrandA,
@@ -2059,6 +2063,7 @@ void *PileUp(void *args)
 		for (i = 0; i < (tmp->end - tmp->beg); i++) {
 			tmp->positions[i].A = tmp->positions[i].C = tmp->positions[i].G = tmp->positions[i].T = 0;
 			tmp->positions[i].Asb = tmp->positions[i].Csb = tmp->positions[i].Gsb = tmp->positions[i].Tsb = 0;
+			tmp->positions[i].del = 0;
 		}
 		tmp->duptable = foo->duptable;
 		tmp->arguments = foo->arguments;
