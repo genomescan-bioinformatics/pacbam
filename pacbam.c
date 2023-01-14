@@ -39,7 +39,7 @@
 
 int MAX_READ_BUFF = 1000000;
 int MAX_DUP = 1;
-int MAX_CHR = 100;
+int MAX_CHR = 10000;
 int MAX_CSOFT_CLIP = 101;
 char **BED_CHR;
 char **VCF_CHR;
