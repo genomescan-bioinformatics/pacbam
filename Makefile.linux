@@ -15,3 +15,7 @@ static:
 	
 clean: 
 	rm -f *.o 
+
+test:
+	if [ -d tmp ]; then rm -r tmp; fi
+	/bin/bash example/test.sh
