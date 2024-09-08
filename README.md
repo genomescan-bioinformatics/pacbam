@@ -1,3 +1,8 @@
+[![Build Status](https://github.com/genomescan/pacbam/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/gerbenvoshol/genomescan/pacbam/workflows/c-cpp.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Language](http://img.shields.io/badge/language-C-brightgreen.svg)](https://en.wikipedia.org/wiki/C_(programming_language))
+
+
 # NON OFFICIAL REPOSITORY!! See https://bitbucket.org/CibioBCG/pacbam/src/master/ for the official repository
 
 # PaCBAM
